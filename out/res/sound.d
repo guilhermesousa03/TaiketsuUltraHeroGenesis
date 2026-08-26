@@ -1,1 +1,0 @@
-out/res/sound.o: res/sound.res
