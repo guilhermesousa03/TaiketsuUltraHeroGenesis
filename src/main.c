@@ -16,19 +16,23 @@
 
 //--- DEFINICOES ---//
 #define RELEASE 0
+
 #define WEAK   1
 #define MEDIUM 2
 #define FIERCE 3
+
 #define LP     1
 #define MP     2
 #define HP     3
 #define LK     4
 #define MK     5
 #define HK     6
+
 #define INDEX_MAR 0xe3 // Usado na animacao do cenario (endereco de memoria)
 #define CIGD 3         // (C)iclo(I)nteracoes(G)ravidade(D)efault (usado na engine de Fisica)
 #define BODYSPACE 15   // Distancia minima entre os jogadores (x2)
 #define RAGETIMER 600  // Tempo de Fúria no samsho2, antes de voltar ao normal
+
 //SOUND DEFs
 #define INGAME_SFX 64
 #define P1_SFX     65
@@ -36,8 +40,31 @@
 #define SFX_ARG    70
 #define SFX_FATAL  71
 
+#define VRAM_SIZE 600 //Espaço da memoria reservado para os sprites
+#define GE_COUNT   25
+
+//--- NUM PLAYERS ---//
+enum Players {
+    P1 = 0,
+    P2 = 1,
+    NUM_PLAYERS
+};
+
+//--- ROOMS DEFs ---//
+enum Rooms {
+	R_TELA_HAMOOPIG, //1
+	R_TELA_LOGO,
+	R_MAIN_MENU,
+	R_DESCOMPRESSION, //9
+	R_IN_GAME,        //10
+	R_AFTER_MATCH     //11
+};
+
+//--------------------
+
 //--- FUNCOES ---//
 void FUNCAO_INICIALIZACAO();
+void FUNCAO_PLAYER_INIT(u8 player);
 void FUNCAO_ROUND_INIT();
 void FUNCAO_ROUND_RESTART();
 void FUNCAO_RELOGIO();
@@ -51,13 +78,23 @@ void FUNCAO_PHYSICS();
 bool FUNCAO_CHECK_GUARD(u8 guardFlag, u8 enemy);
 void FUNCAO_SPR_POSITION();
 void FUNCAO_ANIMACAO();
-void FUNCAO_CAMERA_BGANIM();
+void FUNCAO_CAMERA();
 void FUNCAO_DEPTH(u8 Player);
-void FUNCAO_SAMSHOFX();
 void FUNCAO_DEBUG();
 bool FUNCAO_COLISAO(s16 R1x1, s16 R1y1, s16 R1x2, s16 R1y2, s16 R2x1, s16 R2y1, s16 R2x2, s16 R2y2);
 void FUNCAO_UPDATE_LIFESP(u8 Player, u8 EnergyType, s8 Value);
+static inline void FUNCTION_RELEASE_SPRITE_SAFE(Sprite **sprite);
 void CLEAR_VDP();
+inline void FUNCAO_UTIL();
+void ROOM_DESCOMPRESSION();
+
+void ROOM_TELA_HAMOOPIG();
+void ROOM_IN_GAME();
+void ROOM_AFTER_MATCH();
+
+void FUNCAO_UPDATE_SPARKS();
+void FUNCAO_GET_SPARK_POSITION(s16 box1_x1, s16 box1_y1, s16 box1_x2, s16 box1_y2, s16 box2_x1, s16 box2_y1, s16 box2_x2, s16 box2_y2, s16* sparkX, s16* sparkY);
+static inline s16 FUNCAO_CLAMP_S16(s16 value, s16 min, s16 max);
 
 void FUNCAO_FSM_DEFENSE(u8 player, u8 enemy);
 void FUNCAO_FSM_NORMAL_ATTACKS(u8 player);
@@ -65,9 +102,12 @@ void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player);
 void FUNCAO_FSM_COLLISION(u8 player, u8 enemy);
 void FUNCAO_CHECK_FRAME_ADVANTAGE();
 
+
+
+
 //--- VARIAVEIS ---//
-u8   i;                   //Variavel inteira de uso geral
-u8   doubleHitStep=0;
+bool gDebug = 0;          //Exibe o Debug
+u8   doubleHitStep = 0;
 u32  gFrames = 0;         //Contador de frames
 bool gPauseSystem = 0;    //sistema de pause
 u16  gPauseKoTimer = 0;
@@ -84,7 +124,6 @@ s8   gClockLTimer=9;      //Digito esquerdo do Relogio
 s8   gClockRTimer=9;      //Digito direito do Relogio
 u8   gRound=1;            //Round Number
 u8   gSombraStyle=1;      //Estilo de Sombra, carregamento de 1 ou 2 sombras, por padrao, carregamos 1 para liberar mais tiles na VDP
-bool gDebug = 0;          //Exibe o Debug
 char gStr[64];            //Variavel para armazenar textos, usada no debug
 u16  gInd_tileset;        //Variavel utilizada para carregar dados de background
 bool gASG_system;         //variavel usada pelo "Anti Sprite Glitch System" system (A.S.G.S.)
@@ -106,8 +145,6 @@ s16  gMeioDaTela = 0;     //Meio da Camera em X
 s16  gScrollValues[28] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }; //Scrolling do Cenario
 s16  gScrollValue;        //Scrolling de Cenario
 u8   gBG_Choice=3;        //Cenario Escolhido
-u8   Spark1_countDown;    //Desativa Efeito Spark1
-u8   Spark2_countDown;    //Desativa Efeito Spark2
 s16  PetalaPX[40];        //Petalas da tela de Apresentacao, X
 s16  PetalaPY[40];        //Petalas da tela de Apresentacao, Y
 
@@ -134,21 +171,6 @@ u8   stepRoom=1;          //etapa em que esta a room, var de controle
 u8   mainMenuOption=1;    //usada na main menu
 u8   charSelStep=0;       //etapa de escolha dos personagens, util no modo P1 vs IA
 
-//LINKUEI INTRO
-u16 palette[64];
-s16 scrollvalues[224];
-s16 scrollvaluesA[224];
-int X;
-int Y;
-int px;
-int py;
-int x1 = -8-(19*8);
-int y1 = 84;
-int fps;
-int flicker;
-int timer;
-int framecount;
-
 //Sprites
 Sprite* Rect1BB1_Q1; Sprite* Rect1BB1_Q2; Sprite* Rect1BB1_Q3; Sprite* Rect1BB1_Q4; 
 Sprite* Rect1HB1_Q1; Sprite* Rect1HB1_Q2; Sprite* Rect1HB1_Q3; Sprite* Rect1HB1_Q4;
@@ -158,7 +180,7 @@ Sprite* Rect2HB1_Q1; Sprite* Rect2HB1_Q2; Sprite* Rect2HB1_Q3; Sprite* Rect2HB1_
 Sprite* ClockL;      //Relogio, digito esquedo, N_
 Sprite* ClockR;      //Relogio, digito direito, _N
 Sprite* HUD_Lethers; //Round N, Duel N, Fight, Begin, etc...
-Sprite* Spark[3];    //Efeitos de Hits, Blocks, Magias, etc
+Sprite* sombra;      //Sprite (sombra) do Player
 
 //Inputs, Joystick
 bool JOY1_UP, JOY1_DOWN, JOY1_LEFT, JOY1_RIGHT, JOY1_A, JOY1_B, JOY1_C, JOY1_X, JOY1_Y, JOY1_Z, JOY1_START, JOY1_MODE;
@@ -201,6 +223,7 @@ u16 esmurra;
 u16 pulandoFrenteTras;
 u16 defendeTempo;
 bool ctrlResetInput = FALSE;
+
 //modo campanha
 u8 P2fase[9];
 const Image *BGfase[9];
@@ -210,8 +233,18 @@ u8 defesaIA[9];
 u8 fase;
 u8 faseMAX;
 
+
+// Para efeitos de Hits, Blocks, Magias, etc.
 typedef struct {
-	Sprite* spriteFBall; //Sprite da Fireball do Player
+	Sprite* sprite;       //Imagem do spark
+	u8 countDown; 		  //Contador para desativar o spark
+	s16 x;                //Posicao X do spark
+	s16 y;                //Posicao Y do spark
+} Spark_DEF;
+Spark_DEF Spark[NUM_PLAYERS];
+
+typedef struct {
+	Sprite* sprite; //Sprite da Fireball do Player
 	s8 direcao;          //Direcao de propagacao da Fireball (eixo X)
 	u8 speedX;           //Velocidade da Magia (eixo X)
 	bool active;         //Fireball está ativada ou nao
@@ -221,11 +254,11 @@ typedef struct {
 	u8  guardFlag;       //Utilizado para verificar qual defesa protege do ataque
 	u16 dataHBox[4];     //Posiconamento das Hit Boxes (caixas vermelhas de ataque)
 } FireballDEF;
+FireballDEF FBall[NUM_PLAYERS];
 
-struct PlayerDEF {
+typedef struct {
 	Sprite* sprite;      //Sprite do Player 
-	Sprite* sombra;      //Sprite (sombra) do Player 
-	FireballDEF fball;   //Fireball do Player
+	
 	u16 bufferSpecial;
 	int paleta;          //Paleta do personagem
 	u8  palID;           //ID da paleta ativa no momento
@@ -233,14 +266,10 @@ struct PlayerDEF {
 	s8  energia;         //Energia do Player, usada para fins de HUD, graficos das barras
 	s8  energiaBase;     //Energia Base do Player, essa é a energia real, usada para definir o round
 	s8  energiaSP;       //Energia / Barra de Especial
-	u16 bebado;
-	u8  rageLvl;         //Nivel de Raiva, usado no jogo Samurai Shodown 2 /*samsho2*/
-	u16 rageTimerCountdown; //Tempo em que fica furioso no samsho2
-
+	
 	u16 state;           //Controla o estado (animacao) do Player
 	u8 stateMoveType;    //Para identificar o estado de movimento do personagem: 0=estado neutro; 1=atacando; 2=acertado por ataques fisicos; 3=acertado por projeteis
 	bool control;		 //Para verificar se o personagem esta sobe controle ou nao
-
 
 	u8  joyDirTimer[10]; //Utilizado para verificar o comando das magias -> Direcionais Timers
 	u8  inputArray[5];   //Utilizado para verificar o comando das magias -> Direcionais Ordenados
@@ -285,11 +314,14 @@ struct PlayerDEF {
 	u8 key_JOY_X_status; u8 key_JOY_Y_status; u8 key_JOY_Z_status;
 	u8 key_JOY_START_status; u8 key_JOY_MODE_status;
 	u8 key_JOY_countdown[10]; //timer regressivo, ativado apos pressionar um botao direcional (usado para correr, esquivar, etc)
-}; struct PlayerDEF P[3];
 
-struct GraphicElementDEF {
+} PlayerDEF;
+PlayerDEF P[NUM_PLAYERS];
+
+typedef struct {
 	Sprite* sprite;      //Sprite do Graphic Element
-}; struct GraphicElementDEF GE[25];
+} GraphicElementDEF;
+GraphicElementDEF GE[GE_COUNT];
 
 int main(bool hard) /************** MAIN **************/
 {
@@ -301,8 +333,8 @@ int main(bool hard) /************** MAIN **************/
 	 VDP_setPlaneSize(64,32,TRUE);  //Recomendado para BGs grandes //old: SGDK 1.65
 	 VDP_setTextPlane(BG_A);        //Textos serao desenhados no BG_A
 	 VDP_setTextPalette(PAL1);      //Textos serao desenhados com a ultima cor da PAL0
-     //SPR_init(127, 384, 256);       //SPR_init(u16 maxSprite, u16 vramSize, u16 unpackBufferSize) //old: SGDK 1.65
-	 SPR_initEx(620);       		//SPR_initEx(u16 vramSize)
+     //SPR_init(127, 384, 256);     //SPR_init(u16 maxSprite, u16 vramSize, u16 unpackBufferSize) //old: SGDK 1.65
+	 SPR_initEx(VRAM_SIZE);       	//SPR_initEx(u16 vramSize)
 	 VDP_setBackgroundColor(0);     //Range 0-63 //4 Paletas de 16 cores = 64 cores
 	SYS_enableInts();
 	
@@ -311,6 +343,8 @@ int main(bool hard) /************** MAIN **************/
 	
 	if(!hard){ SYS_hardReset(); } //Previne bug do Reset //hpig 1.1
 	
+	gRoom = R_TELA_HAMOOPIG; //Tela inicial
+
 	//////////////////////////////////////////////////////I.A. (config)
 	fase = 4; //manter o valor igual a 1
 	faseMAX = 8; //configurado para 8 fases no maximo (escolher valor de 1 a 8)
@@ -360,185 +394,10 @@ int main(bool hard) /************** MAIN **************/
 	
     while(TRUE) /// LOOP PRINCIPAL ///
     {
-        gFrames++; 
-		if(gPing2  == 1){ gPing2 = -1; } gPing2++;  //var 'gPing2'  (50%) variacao: 0 ; 1
-		if(gPing4  == 3){ gPing4 = -1; } gPing4++;  //var 'gPing4'  (25%) variacao: 0 ; 1 ; 2 ; 3
-		if(gPing10 == 9){ gPing10= -1; } gPing10++; //var 'gPing10' (10%) variacao: 0 ; 1 ; 2 ; 3 ; 4 ; 5 ; 6 ; 7 ; 8 ; 9
-		
-		if(gRoom==1) //TELA HAMOOPIG --------------------------------------------------------------
-		{
-			FUNCAO_INPUT_SYSTEM(); //Verifica os joysticks 
-			
-			//inicializacao
-			if(gFrames==1)
-			{
-				//XGM_startPlay(music_stage8);
-				//XGM_isPlaying(); //FIX
-				
-				PAL_setColors(0, palette_black, 64, DMA); 
-				//BG_B
-				VDP_loadTileSet(room_0_bgb.tileset, 1, DMA); //Load the tileset
-				VDP_setTileMapEx(BG_B,room_0_bgb.tilemap, TILE_ATTR_FULL(PAL2, 0, FALSE, FALSE, 1), 0, 0, 0, 0, 40, 28, DMA);
-				//BG_A
-				VDP_loadTileSet(room_0_bga.tileset, 501, DMA); //Load the tileset
-				VDP_setTileMapEx(BG_A,room_0_bga.tilemap, TILE_ATTR_FULL(PAL3, 0, FALSE, FALSE, 501), 0, 0, 0, 0, 40, 28, DMA);
-				
-				//FADE IN
-				memcpy(&palette[32], room_0_bgb.palette->data, 18 * 2);  
-				memcpy(&palette[48], room_0_bga.palette->data, 18 * 2);  
-				PAL_fadeIn(0, (4 * 16) - 1, palette, 20, FALSE);   
-			}
-			
-			if(gFrames==60*2)
-			{
-				PAL_fadeOutAll(20, FALSE);
-				waitMs(200);
-			}
-			
-			//gFrames=60*5; 
-			if( (gFrames>=60*2) || (P[1].key_JOY_START_status==1 && gFrames>10) || (P[2].key_JOY_START_status==1 && gFrames>10) ){
-				CLEAR_VDP();
-				gRoom=9;
-				gDescompressionExit=10;
-				//if(P[1].key_JOY_START_status==1 || P[1].key_JOY_START_status==2){gRoom=2; XGM_setPCM(P1_SFX, snd_confirm, sizeof(snd_confirm)); XGM_startPlayPCM(P1_SFX, 1, SOUND_PCM_CH3); }
-				gFrames=1;
-				P[1].id=1; PAL_setPalette(PAL2, spr_jack_pal1.palette->data, DMA); 
-				P[2].id=1; PAL_setPalette(PAL3, spr_jack_pal1.palette->data, DMA);
-			};
-		}
-		
-		if(gRoom==9) //DESCOMPRESSION -------------------------------------------------------------
-		{
-			GE[1].sprite = SPR_addSpriteExSafe(&spr_point,  0, 225, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-			GE[2].sprite = SPR_addSpriteExSafe(&spr_point,  0, 225, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-			GE[3].sprite = SPR_addSpriteExSafe(&spr_point,  0, 225, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-			
-			if(gFrames==20)
-			{
-				if (GE[1].sprite){ SPR_releaseSprite(GE[1].sprite); GE[1].sprite = NULL; }
-				if (GE[2].sprite){ SPR_releaseSprite(GE[2].sprite); GE[2].sprite = NULL; }
-				if (GE[3].sprite){ SPR_releaseSprite(GE[3].sprite); GE[3].sprite = NULL; }
-				gRoom=gDescompressionExit;
-				gFrames=1; 
-				CLEAR_VDP();
-			}
-			
-		}
-		
-		if(gRoom==10) //IN GAME -------------------------------------------------------------------
-		{
-			//buffer de especiais para P1
-			if(P[1].hitPause==0 && P[1].bufferSpecial!=0){
-				PLAYER_STATE(1, P[1].bufferSpecial);
-				P[1].bufferSpecial=0;
-			}
-
-			//buffer de especiais para P2
-			if(P[2].hitPause==0 && P[2].bufferSpecial!=0){
-				PLAYER_STATE(2, P[2].bufferSpecial);
-				P[2].bufferSpecial=0;
-			}
-			
-			
-			/*//HWA bebado
-			if( P[1].id==8 && P[1].bebado>0){ P[1].bebado--; }
-			if( P[1].bebado>1 ){
-				if(P[1].palID==1){ PAL_setPalette(PAL2, spr_hwa_pal1b.palette->data, DMA); } //hwa
-				if(P[1].palID==2){ PAL_setPalette(PAL2, spr_hwa_pal2b.palette->data, DMA); } //hwa
-			}
-			if( P[1].bebado==1 ){
-				if(P[1].palID==1){ PAL_setPalette(PAL2, spr_hwa_pal1.palette->data, DMA); } //hwa
-				if(P[1].palID==2){ PAL_setPalette(PAL2, spr_hwa_pal2.palette->data, DMA); } //hwa
-			}
-			if( P[2].id==8 && P[2].bebado>0){ P[2].bebado--;  }
-			if( P[2].bebado>1 ){
-				if(P[2].palID==1){ PAL_setPalette(PAL3, spr_hwa_pal1b.palette->data, DMA); } //hwa
-				if(P[2].palID==2){ PAL_setPalette(PAL3, spr_hwa_pal2b.palette->data, DMA); } //hwa
-			}
-			if( P[2].bebado==1 ){
-				if(P[2].palID==1){ PAL_setPalette(PAL3, spr_hwa_pal1.palette->data, DMA); } //hwa
-				if(P[2].palID==2){ PAL_setPalette(PAL3, spr_hwa_pal2.palette->data, DMA); } //hwa
-			}
-			*/
-			
-			//codigo de "SLOW MOTION KO"
-			if((P[1].energiaBase==0 || P[2].energiaBase==0) && gFrames>100)
-			{
-				gPauseSystem=1;
-				gPauseKoTimer++;
-				if(gPauseKoTimer>=90 && gPauseKoTimer<=320)
-				{
-					if(gPing2==0){gPauseSystem=0;}
-					if(gPing2==1){gPauseSystem=1;}
-				}
-				if(gPauseKoTimer>320)
-				{
-					gPauseSystem=0;
-				}
-			}else{
-				gPauseKoTimer=0;
-			}
-			
-			if(gFrames == 1){ 
-				gPodeMover=0;
-				FUNCAO_INICIALIZACAO(); //Inicializacao
-			}
-			if(gFrames<=355){ 
-				FUNCAO_ROUND_INIT(); //Rotina de Letreiramento de inicio dos rounds
-			}else{
-				if(gPauseSystem==0) {
-					FUNCAO_RELOGIO(); //HUD relogio
-					FUNCAO_BARRAS_DE_ENERGIA(); //HUD barras
-				}
-				if(P[1].energiaBase==0 || P[2].energiaBase==0){ 
-					gPodeMover=0; 
-				}
-			}
-			
-			//libera os graficos dos sparks
-			if(Spark1_countDown>0){ 
-				Spark1_countDown--; 
-				if(Spark1_countDown==1) { 
-					if(Spark[1]){ SPR_releaseSprite(Spark[1]); Spark[1] = NULL; }
-				} 
-			}
-			if(Spark2_countDown>0){ 
-				Spark2_countDown--; 
-				if(Spark2_countDown==1) { 
-					if(Spark[2]){ SPR_releaseSprite(Spark[2]); Spark[2] = NULL; }
-				} 
-			}
-			
-			if(doubleHitStep==1 && P[1].hitPause==0 && P[2].hitPause==0){ doubleHitStep=2; }
-			
-			if(gPauseSystem==0)
-			{
-				FUNCAO_INPUT_SYSTEM(); //Verifica os joysticks 
-				
-				FUNCAO_ANIMACAO(); //Atualiza animacao
-				
-				FUNCAO_FSM(); //FSM = Finite State Machine (Maquina de Estados)
-				
-				FUNCAO_PHYSICS(); //Funcoes de Fisica
-				
-				FUNCAO_CAMERA_BGANIM();
-				
-				FUNCAO_SAMSHOFX(); //Efeitos do jogo SS2
-				
-				if(gDebug == 1){ FUNCAO_DEBUG(); } //Debug
-			}
-			
-		}
-		
-		if(gRoom==11) //AFTER MATCH ---------------------------------------------------------------
-		{
-			FUNCAO_INPUT_SYSTEM(); //Verifica os joysticks 
-		}
-		
-		//--- FINALIZACOES ---//
-		//VDP_showFPS(1);        //Mostra a taxa de FPS
-		SPR_update();          //Atualiza (desenha) os sprites
-        SYS_doVBlankProcess(); //Wait for screen refresh and do all SGDK VBlank tasks
+		if(gRoom==R_TELA_HAMOOPIG){ ROOM_TELA_HAMOOPIG(); }
+		if(gRoom==R_DESCOMPRESSION){ ROOM_DESCOMPRESSION(); }
+		if(gRoom==R_IN_GAME){ ROOM_IN_GAME(); }
+		if(gRoom==R_AFTER_MATCH){ ROOM_AFTER_MATCH(); }
     }
 	
     return 0;
@@ -549,7 +408,7 @@ int main(bool hard) /************** MAIN **************/
 void PLAYER_STATE(u8 Player, u16 State)
 {
 	
-	if (P[Player].sprite){ SPR_releaseSprite(P[Player].sprite); P[Player].sprite = NULL; }
+	if(P[Player].sprite){ SPR_releaseSprite(P[Player].sprite); P[Player].sprite = NULL; }
 	
 	P[Player].animFrame      = 1;
 	P[Player].frameTimeAtual = 1;
@@ -564,69 +423,69 @@ void PLAYER_STATE(u8 Player, u16 State)
 	if(State==507){ State=502; }
 	
 	//virando de lado (mudanca de estado) //hpig 1.1
-	if(Player==1)
+	if(Player==P1)
 	{
-		if(P[1].direcao== 1 && P[2].x<P[1].x && State==100){ State=607; }
-		if(P[1].direcao==-1 && P[1].x<P[2].x && State==100){ State=607; }
-		if(P[1].direcao== 1 && P[2].x<P[1].x && State==200){ State=608; }
-		if(P[1].direcao==-1 && P[1].x<P[2].x && State==200){ State=608; }
+		if(P[P1].direcao== 1 && P[P2].x<P[P1].x && State==100){ State=607; }
+		if(P[P1].direcao==-1 && P[P1].x<P[P2].x && State==100){ State=607; }
+		if(P[P1].direcao== 1 && P[P2].x<P[P1].x && State==200){ State=608; }
+		if(P[P1].direcao==-1 && P[P1].x<P[P2].x && State==200){ State=608; }
 		
-		if(P[1].y==P[2].y)
+		if(P[P1].y==P[P2].y)
 		{
-			      if(P[1].direcao== 1 && P[2].x<P[1].x && (State>=501 && State<=550) ){ P[1].direcao=-1; 
-			}else if(P[1].direcao==-1 && P[1].x<P[2].x && (State>=501 && State<=550) ){ P[1].direcao= 1; 
+			      if(P[P1].direcao== 1 && P[P2].x<P[P1].x && (State>=501 && State<=550) ){ P[P1].direcao=-1; 
+			}else if(P[P1].direcao==-1 && P[P1].x<P[P2].x && (State>=501 && State<=550) ){ P[P1].direcao= 1; 
 			}
 		}
 	}else{
-		if(P[2].direcao== 1 && P[1].x<P[2].x && State==100){ State=607; }
-		if(P[2].direcao==-1 && P[2].x<P[1].x && State==100){ State=607; }
-		if(P[2].direcao== 1 && P[1].x<P[2].x && State==200){ State=608; }
-		if(P[2].direcao==-1 && P[2].x<P[1].x && State==200){ State=608; }
+		if(P[P2].direcao== 1 && P[P1].x<P[P2].x && State==100){ State=607; }
+		if(P[P2].direcao==-1 && P[P2].x<P[P1].x && State==100){ State=607; }
+		if(P[P2].direcao== 1 && P[P1].x<P[P2].x && State==200){ State=608; }
+		if(P[P2].direcao==-1 && P[P2].x<P[P1].x && State==200){ State=608; }
 		
-		if(P[1].y==P[2].y)
+		if(P[P1].y==P[P2].y)
 		{
-			      if(P[2].direcao== 1 && P[1].x<P[2].x && (State>=501 && State<=550) ){ P[2].direcao=-1; 
-			}else if(P[2].direcao==-1 && P[2].x<P[1].x && (State>=501 && State<=550) ){ P[2].direcao= 1; 
+			      if(P[P2].direcao== 1 && P[P1].x<P[P2].x && (State>=501 && State<=550) ){ P[P2].direcao=-1; 
+			}else if(P[P2].direcao==-1 && P[P2].x<P[P1].x && (State>=501 && State<=550) ){ P[P2].direcao= 1; 
 			}
 		}
 	}
 	if(State==550)//bugfix
 	{
-		if(Player==1)
+		if(Player==P1)
 		{
-			if(P[1].x>P[2].x && P[1].direcao== 1){ P[1].direcao=-1; 
-			}else if(P[1].x<P[2].x && P[1].direcao==-1){ P[1].direcao= 1; }
+			if(P[P1].x>P[P2].x && P[P1].direcao== 1){ P[P1].direcao=-1; 
+			}else if(P[P1].x<P[P2].x && P[P1].direcao==-1){ P[P1].direcao= 1; }
 		}
-		if(Player==2)
+		if(Player==P2)
 		{
-			if(P[2].x>P[1].x && P[2].direcao== 1){ P[2].direcao=-1; 
-			}else if(P[2].x<P[1].x && P[2].direcao==-1){ P[2].direcao= 1; }
+			if(P[P2].x>P[P1].x && P[P2].direcao== 1){ P[P2].direcao=-1; 
+			}else if(P[P2].x<P[P1].x && P[P2].direcao==-1){ P[P2].direcao= 1; }
 		}
 	}
 	
 	//hpig 1.1 bugfix special wrong side after jump
 	if(State==606)
 	{
-		if(Player==1)
+		if(Player==P1)
 		{
-			if(P[1].x>P[2].x && P[1].direcao== 1){ u8 a; a=P[1].joyDirTimer[6]; P[1].joyDirTimer[6]=P[1].joyDirTimer[4]; P[1].joyDirTimer[4]=a; }
-			if(P[1].x<P[2].x && P[1].direcao==-1){ u8 a; a=P[1].joyDirTimer[6]; P[1].joyDirTimer[6]=P[1].joyDirTimer[4]; P[1].joyDirTimer[4]=a; }
+			if(P[P1].x>P[P2].x && P[P1].direcao== 1){ u8 a; a=P[P1].joyDirTimer[6]; P[P1].joyDirTimer[6]=P[P1].joyDirTimer[4]; P[P1].joyDirTimer[4]=a; }
+			if(P[P1].x<P[P2].x && P[P1].direcao==-1){ u8 a; a=P[P1].joyDirTimer[6]; P[P1].joyDirTimer[6]=P[P1].joyDirTimer[4]; P[P1].joyDirTimer[4]=a; }
 		}
-		if(Player==2)
+		if(Player==P2)
 		{
-			if(P[2].x>P[1].x && P[2].direcao== 1){ u8 a; a=P[2].joyDirTimer[6]; P[2].joyDirTimer[6]=P[2].joyDirTimer[4]; P[2].joyDirTimer[4]=a; }
-			if(P[2].x<P[1].x && P[2].direcao==-1){ u8 a; a=P[2].joyDirTimer[6]; P[2].joyDirTimer[6]=P[2].joyDirTimer[4]; P[2].joyDirTimer[4]=a; }
+			if(P[P2].x>P[P1].x && P[P2].direcao== 1){ u8 a; a=P[P2].joyDirTimer[6]; P[P2].joyDirTimer[6]=P[P2].joyDirTimer[4]; P[P2].joyDirTimer[4]=a; }
+			if(P[P2].x<P[P1].x && P[P2].direcao==-1){ u8 a; a=P[P2].joyDirTimer[6]; P[P2].joyDirTimer[6]=P[P2].joyDirTimer[4]; P[P2].joyDirTimer[4]=a; }
 		}
 	}
 	if(State==700 || State==710 || State==720 || State==730 || State==740 || State==750 || State==760 || State==770 || State==780 || State==790)
 	{
-		if(Player==1)
+		if(Player==P1)
 		{
-			if( (P[1].x>P[2].x && P[1].direcao== 1) || (P[1].x<P[2].x && P[1].direcao==-1) ){ if(P[1].direcao==1){ P[1].direcao=-1; }else{P[1].direcao=1;} }
+			if( (P[P1].x>P[P2].x && P[P1].direcao== 1) || (P[P1].x<P[P2].x && P[P1].direcao==-1) ){ if(P[P1].direcao==1){ P[P1].direcao=-1; }else{P[P1].direcao=1;} }
 		}
-		if(Player==2)
+		if(Player==P2)
 		{
-			if( (P[2].x>P[2].x && P[2].direcao== 1) || (P[2].x<P[2].x && P[2].direcao==-1) ){ if(P[2].direcao==1){ P[2].direcao=-1; }else{P[2].direcao=1;} }
+			if( (P[P2].x>P[P2].x && P[P2].direcao== 1) || (P[P2].x<P[P2].x && P[P2].direcao==-1) ){ if(P[P2].direcao==1){ P[P2].direcao=-1; }else{P[P2].direcao=1;} }
 		}
 		
 	}
@@ -634,20 +493,20 @@ void PLAYER_STATE(u8 Player, u16 State)
 	//cross hpig 1.1
 	if(State==606)
 	{
-		if(Player==1)
+		if(Player==P1)
 		{
-			if(P[2].state>=501 && P[2].state<550)
+			if(P[P2].state>=501 && P[P2].state<550)
 			{
 				State=100;
-				if(P[1].x>P[2].x){P[1].direcao=-1;}else{P[1].direcao=1;}
+				if(P[P1].x>P[P2].x){P[P1].direcao=-1;}else{P[P1].direcao=1;}
 			}
 		}
-		if(Player==2)
+		if(Player==P2)
 		{
-			if(P[1].state>=501 && P[1].state<550)
+			if(P[P1].state>=501 && P[P1].state<550)
 			{
 				State=100;
-				if(P[2].x>P[1].x){P[2].direcao=-1;}else{P[2].direcao=1;}
+				if(P[P2].x>P[P1].x){P[P2].direcao=-1;}else{P[P2].direcao=1;}
 			}
 		}
 		
@@ -1345,7 +1204,6 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_615, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==700){ //OK
-			//P[Player].fBallCountDown=74; //caso queira que a fball desapareca depois de um tempo
 			P[Player].w = 15*8;
 			P[Player].h = 14*8;
 			P[Player].axisX = (P[Player].w/2)+8;
@@ -1509,7 +1367,7 @@ void PLAYER_STATE(u8 Player, u16 State)
 	SPR_setAnimAndFrame(P[Player].sprite, 0, P[Player].animFrame-1);
 	P[Player].frameTimeTotal  = P[Player].dataAnim[1];
 
-	if (P[Player].sprite){ FUNCAO_DEPTH(Player); } //Define a prioridade de desenho (se sprite completamente carregado)
+	if(P[Player].sprite){ FUNCAO_DEPTH(Player); } //Define a prioridade de desenho (se sprite completamente carregado)
 
 	FUNCAO_SPR_POSITION(); //Define a posicao do Sprite
 	FUNCAO_FSM_HITBOXES(Player); //Atualiza as Hurt / Hitboxes
@@ -1524,10 +1382,10 @@ void FUNCAO_PLAY_SND(u8 Player, u16 State)
 	//Os golpes <FRACOS> geralmente alternam entre 2 sons
 	//Os golpes <MEDIOS> e <FORTES> geralmente, alternam entre 4 sons
 	
-	if(Player==1)
+	if(Player==P1)
 	{
 		/*
-		if(P[1].id==1) //ryo
+		if(P[P1].id==1) //ryo
 		{
 			if(
 				State==101 || State==104 || 
@@ -1575,10 +1433,10 @@ void FUNCAO_PLAY_SND(u8 Player, u16 State)
 		*/
 	}
 	
-	if(Player==2)
+	if(Player==P2)
 	{
 		/*
-		if(P[2].id==1) //ryo
+		if(P[P2].id==1) //ryo
 		{
 			if(
 				State==101 || State==104 || 
@@ -1633,7 +1491,7 @@ void FUNCAO_PLAY_SND(u8 Player, u16 State)
 void FUNCAO_RELOGIO()
 {
 	/*
-	if(gClockTimer>0 && (gClockLTimer>0 || gClockRTimer>0) && (P[1].energiaBase>0 && P[2].energiaBase>0) ){ gClockTimer--; }
+	if(gClockTimer>0 && (gClockLTimer>0 || gClockRTimer>0) && (P[P1].energiaBase>0 && P[P2].energiaBase>0) ){ gClockTimer--; }
 	//temporario
 	if(gClockLTimer==0 && gClockRTimer==1){ gClockLTimer=9; gClockRTimer=9; }
 	
@@ -1693,7 +1551,7 @@ void FUNCAO_RELOGIO()
 void FUNCAO_BARRAS_DE_ENERGIA()
 {
 	
-	for(i=1; i<=2; i++)
+	for(u8 i = P1; i < NUM_PLAYERS; i++)
 	{
 		if( P[i].energia != P[i].energiaBase )
 		{ 
@@ -1722,8 +1580,8 @@ void FUNCAO_BARRAS_DE_ENERGIA()
 		}
 		if(GE[4+i].sprite)
 		{
-			if(i==1){ SPR_setPosition(GE[4+i].sprite,  40+(subEnergyPos*8), 12); }
-			if(i==2){ SPR_setPosition(GE[4+i].sprite, 280-(subEnergyPos*8), 12); }
+			if(i==P1){ SPR_setPosition(GE[4+i].sprite,  40+(subEnergyPos*8), 12); }
+			if(i==P2){ SPR_setPosition(GE[4+i].sprite, 280-(subEnergyPos*8), 12); }
 		}
 		
 		int a=0;
@@ -1758,8 +1616,8 @@ void FUNCAO_BARRAS_DE_ENERGIA()
 		
 	}
 	
-	//if(P[1].energiaSP>=32){ SPR_setVisibility(GE[ 9].sprite, VISIBLE); }else{ SPR_setVisibility(GE[ 9].sprite, HIDDEN); }
-	//if(P[2].energiaSP>=32){ SPR_setVisibility(GE[10].sprite, VISIBLE); }else{ SPR_setVisibility(GE[10].sprite, HIDDEN); }
+	//if(P[P1].energiaSP>=32){ SPR_setVisibility(GE[ 9].sprite, VISIBLE); }else{ SPR_setVisibility(GE[ 9].sprite, HIDDEN); }
+	//if(P[P2].energiaSP>=32){ SPR_setVisibility(GE[10].sprite, VISIBLE); }else{ SPR_setVisibility(GE[10].sprite, HIDDEN); }
 	
 }
 
@@ -1769,7 +1627,7 @@ void FUNCAO_ANIMACAO()
 	//CONTROLE DE ANIMACAO E END ANIMATION
 	gASG_system = 0; //A.S.G.S. Anti Sprite Glitch System; (Evita a troca simultanea de sprites dos players)
 	
-	for(i=1; i<=2; i++)
+	for(u8 i = P1; i < NUM_PLAYERS; i++)
 	{
 		if (P[i].hitPause==0) {
 			
@@ -1926,19 +1784,19 @@ void FUNCAO_ANIMACAO()
 void FUNCAO_SPR_POSITION()
 {
 	//ajusta posicao do sprite
-	if(P[1].direcao== 1){ SPR_setPosition(P[1].sprite, P[1].x-(P[1].w-P[1].axisX)-camPosX, P[1].y-P[1].axisY); }
-	if(P[1].direcao==-1){ SPR_setPosition(P[1].sprite, P[1].x- P[1].axisX        -camPosX, P[1].y-P[1].axisY); }
-	if(P[2].direcao== 1){ SPR_setPosition(P[2].sprite, P[2].x-(P[2].w-P[2].axisX)-camPosX, P[2].y-P[2].axisY); }
-	if(P[2].direcao==-1){ SPR_setPosition(P[2].sprite, P[2].x- P[2].axisX        -camPosX, P[2].y-P[2].axisY); }
+	if(P[P1].direcao== 1){ SPR_setPosition(P[P1].sprite, P[P1].x-(P[P1].w-P[P1].axisX)-camPosX, P[P1].y-P[P1].axisY); }
+	if(P[P1].direcao==-1){ SPR_setPosition(P[P1].sprite, P[P1].x- P[P1].axisX        -camPosX, P[P1].y-P[P1].axisY); }
+	if(P[P2].direcao== 1){ SPR_setPosition(P[P2].sprite, P[P2].x-(P[P2].w-P[P2].axisX)-camPosX, P[P2].y-P[P2].axisY); }
+	if(P[P2].direcao==-1){ SPR_setPosition(P[P2].sprite, P[P2].x- P[P2].axisX        -camPosX, P[P2].y-P[P2].axisY); }
 	
 	/*
 	if(gSombraStyle==2)
 	{
-		SPR_setPosition(P[1].sombra, P[1].x-32-camPosX, gAlturaPiso-5); // *NOTA: A sombra do SS2 tem 80px, entao desloquei -40px no eixo X
-		SPR_setPosition(P[2].sombra, P[2].x-32-camPosX, gAlturaPiso-5); // para que ela ficasse perfeitamente alinhada aos players 
+		SPR_setPosition(P[P1].sombra, P[P1].x-32-camPosX, gAlturaPiso-5); // *NOTA: A sombra do SS2 tem 80px, entao desloquei -40px no eixo X
+		SPR_setPosition(P[P2].sombra, P[P2].x-32-camPosX, gAlturaPiso-5); // para que ela ficasse perfeitamente alinhada aos players 
 	}else{
-		if(gPing2==0){ SPR_setPosition(P[1].sombra, P[1].x-32-camPosX, gAlturaPiso-5); }
-		if(gPing2==1){ SPR_setPosition(P[1].sombra, P[2].x-32-camPosX, gAlturaPiso-5); }
+		if(gPing2==0){ SPR_setPosition(P[P1].sombra, P[P1].x-32-camPosX, gAlturaPiso-5); }
+		if(gPing2==1){ SPR_setPosition(P[P1].sombra, P[P2].x-32-camPosX, gAlturaPiso-5); }
 	}
 	*/
 }
@@ -1981,7 +1839,7 @@ void FUNCAO_INPUT_SYSTEM()
 	//joystick P2
     //IAP2 = TRUE; //FALSE = IA do P2 desligada,  TRUE = IA do P2 ligada
 
-	if (gRoom != 10 || (IAP2 == FALSE && gRoom == 10))
+	if (gRoom != R_IN_GAME || (IAP2 == FALSE && gRoom == R_IN_GAME))
     {
         u16 JOY2 = JOY_readJoypad(JOY_2);
         if(JOY2 & BUTTON_UP    ) { JOY2_UP    = TRUE; } else { JOY2_UP    = FALSE; }
@@ -1997,9 +1855,9 @@ void FUNCAO_INPUT_SYSTEM()
         if(JOY2 & BUTTON_START ) { JOY2_START = TRUE; } else { JOY2_START = FALSE; }
         if(JOY2 & BUTTON_MODE  ) { JOY2_MODE  = TRUE; } else { JOY2_MODE  = FALSE; }
     }
-    else if (IAP2 == TRUE && gRoom == 10)
+    else if (IAP2 == TRUE && gRoom == R_IN_GAME)
     {
-        if (gPodeMover && P[1].energiaBase > 0 && P[2].energiaBase > 0)
+        if (gPodeMover && P[P1].energiaBase > 0 && P[P2].energiaBase > 0)
         {
             //INTERLIGENCIA ARTIFICIAL DO P2
 
@@ -2011,7 +1869,7 @@ void FUNCAO_INPUT_SYSTEM()
             else if (tempoIAmagia >= 600) tempoIAmagia = 0;
 
             //ATIVA OU NAO O ATAQUE QUANDO A DISTANCIA ENTRE P1 E P2 ESTIVER MENOR QUE 130 PIXELS
-            if (abs(P[1].x-P[2].x) < 150 /*P[1].x >= P[2].x-130 && P[1].x <= P[2].x+130*/ && tempoIAataque >= tempoMinIAataque[fase])
+            if (abs(P[P1].x-P[P2].x) < 150 /*P[P1].x >= P[P2].x-130 && P[P1].x <= P[P2].x+130*/ && tempoIAataque >= tempoMinIAataque[fase])
             {
                 esmurra = random();
                 esmurra = esmurra % 4;
@@ -2053,9 +1911,9 @@ void FUNCAO_INPUT_SYSTEM()
                     tempoIA = 0;
                 }
             }
-            else if (abs(P[1].x-P[2].x) > 200 && tempoIAataque >= tempoMinIAataque[fase] && tempoIAmagia == 0)
+            else if (abs(P[P1].x-P[P2].x) > 200 && tempoIAataque >= tempoMinIAataque[fase] && tempoIAmagia == 0)
             {
-                if (P[2].y == gAlturaPiso)
+                if (P[P2].y == gAlturaPiso)
                 {
                     JOY2_A = FALSE;
                     JOY2_B = FALSE;
@@ -2067,46 +1925,46 @@ void FUNCAO_INPUT_SYSTEM()
                     JOY2_X = TRUE;
 
 					//MAGIAS!
-					if(P[2].id == 1)
+					if(P[P2].id == 1)
 					{
-						if(gPing10==0){ PLAYER_STATE(2,700); }
-						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(2,700); }
-						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(2,710); }
-						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(2,720); }
-						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(2,730); }
-						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(2,700); }
-					}else if(P[2].id == 2)
+						if(gPing10==0){ PLAYER_STATE(P2,700); }
+						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(P2,700); }
+						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(P2,710); }
+						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(P2,720); }
+						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(P2,730); }
+						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(P2,700); }
+					}else if(P[P2].id == 2)
 					{
-						if(gPing10==0){ PLAYER_STATE(2,700); }
-						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(2,700); }
-						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(2,710); }
-						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(2,720); }
-						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(2,730); }
-						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(2,700); }
-					}else if(P[2].id == 3)
+						if(gPing10==0){ PLAYER_STATE(P2,700); }
+						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(P2,700); }
+						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(P2,710); }
+						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(P2,720); }
+						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(P2,730); }
+						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(P2,700); }
+					}else if(P[P2].id == 3)
 					{
-						if(gPing10==0){ PLAYER_STATE(2,700); }
-						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(2,700); }
-						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(2,710); }
-						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(2,720); }
-						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(2,730); }
-						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(2,700); }
-					}else if(P[2].id == 7)
+						if(gPing10==0){ PLAYER_STATE(P2,700); }
+						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(P2,700); }
+						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(P2,710); }
+						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(P2,720); }
+						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(P2,730); }
+						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(P2,700); }
+					}else if(P[P2].id == 7)
 					{
-						if(gPing10==0){ PLAYER_STATE(2,700); }
-						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(2,700); }
-						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(2,710); }
-						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(2,700); }
-						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(2,710); }
-						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(2,700); }
-					}else if(P[2].id ==12) //ryu
+						if(gPing10==0){ PLAYER_STATE(P2,700); }
+						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(P2,700); }
+						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(P2,710); }
+						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(P2,700); }
+						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(P2,710); }
+						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(P2,700); }
+					}else if(P[P2].id ==12) //ryu
 					{
-						if(gPing10==0){ PLAYER_STATE(2,700); }
-						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(2,700); }
-						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(2,710); }
-						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(2,720); }
-						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(2,710); }
-						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(2,700); }
+						if(gPing10==0){ PLAYER_STATE(P2,700); }
+						if(gPing10 >0 && gPing10<= 2){ PLAYER_STATE(P2,700); }
+						if(gPing10>=3 && gPing10<= 4){ PLAYER_STATE(P2,710); }
+						if(gPing10>=5 && gPing10<= 6){ PLAYER_STATE(P2,720); }
+						if(gPing10>=7 && gPing10<= 8){ PLAYER_STATE(P2,710); }
+						if(gPing10>=9 && gPing10<=10){ PLAYER_STATE(P2,700); }
 					}
                 }
 
@@ -2130,7 +1988,7 @@ void FUNCAO_INPUT_SYSTEM()
                 }
             }
 
-            if (P[1].x >= P[2].x-160 && P[1].x <= P[2].x+160 && defendeTempo == 0)
+            if (P[P1].x >= P[P2].x-160 && P[P1].x <= P[P2].x+160 && defendeTempo == 0)
             {
                 if (JOY1_A || JOY1_B || JOY1_C || JOY1_X || JOY1_Y || JOY1_Z)
                 {
@@ -2142,8 +2000,7 @@ void FUNCAO_INPUT_SYSTEM()
                 }
             }
 
-            if (P[1].fball.active
-                && P[1].fball.x >= P[2].x-80 && P[1].fball.x <= P[2].x+80 && defendeTempo == 0)
+            if (FBall[P1].active && FBall[P1].x >= P[P2].x-80 && FBall[P1].x <= P[P2].x+80 && defendeTempo == 0)
             {
                 u16 defendeGolpe;
                 defendeGolpe = random();
@@ -2162,12 +2019,12 @@ void FUNCAO_INPUT_SYSTEM()
 
                 defendeTempo++;
 
-                if (P[1].x >= P[2].x)
+                if (P[P1].x >= P[P2].x)
                 {
                     JOY2_LEFT = TRUE;
                     JOY2_RIGHT = FALSE;
                 }
-                else if (P[1].x < P[2].x)
+                else if (P[P1].x < P[P2].x)
                 {
                     JOY2_LEFT = FALSE;
                     JOY2_RIGHT = TRUE;
@@ -2198,13 +2055,13 @@ void FUNCAO_INPUT_SYSTEM()
                 {
                     tempoIAacao--;
 
-                    if (abs(P[1].x-P[2].x) > 200)
+                    if (abs(P[P1].x-P[P2].x) > 200)
                     {
-                        if (P[1].x < P[2].x && (varIA == 0 || varIA == 2))
+                        if (P[P1].x < P[P2].x && (varIA == 0 || varIA == 2))
                         {
                             tempoIAacao = 0;
                         }
-                        else if (P[1].x > P[2].x && (varIA == 1 || varIA == 2))
+                        else if (P[P1].x > P[P2].x && (varIA == 1 || varIA == 2))
                         {
                             tempoIAacao = 0;
                         }
@@ -2216,7 +2073,7 @@ void FUNCAO_INPUT_SYSTEM()
                 }
 
                 u16 distanciaP1P2;
-                distanciaP1P2 = abs(P[1].x-P[2].x);
+                distanciaP1P2 = abs(P[P1].x-P[P2].x);
 
                 if (varIA == 0 && tempoIAacao > 0)
                 {
@@ -2251,12 +2108,12 @@ void FUNCAO_INPUT_SYSTEM()
                         JOY2_LEFT = TRUE;
                     }
 
-                    if (distanciaP1P2 > 130 && P[1].x > P[2].x)
+                    if (distanciaP1P2 > 130 && P[P1].x > P[P2].x)
                     {
                         JOY2_RIGHT = TRUE;
                         JOY2_LEFT = FALSE;
                     }
-                    else if (distanciaP1P2 > 130 && P[1].x < P[2].x)
+                    else if (distanciaP1P2 > 130 && P[P1].x < P[P2].x)
                     {
                         JOY2_RIGHT = FALSE;
                         JOY2_LEFT = TRUE;
@@ -2264,7 +2121,7 @@ void FUNCAO_INPUT_SYSTEM()
                 }
             }
         }
-        else if (gPodeMover && (P[1].energiaBase == 0 || P[2].energiaBase == 0))
+        else if (gPodeMover && (P[P1].energiaBase == 0 || P[P2].energiaBase == 0))
         {
             JOY2_UP    = FALSE;
             JOY2_DOWN  = FALSE;
@@ -2307,10 +2164,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_UP) {
 	if (key_JOY1_UP_released==1) { key_JOY1_UP_released=0; key_JOY1_UP_pressed=0; key_JOY1_UP_hold=0; }
 	if (key_JOY1_UP_pressed>0 || key_JOY1_UP_hold>0) {key_JOY1_UP_released=1;}}
-	if (key_JOY1_UP_pressed==0 && key_JOY1_UP_hold==0 && key_JOY1_UP_released==0){ P[1].key_JOY_UP_status=0; }
-	if (key_JOY1_UP_pressed  ==1 ) { P[1].key_JOY_UP_status=1; }
-	if (key_JOY1_UP_hold     ==1 ) { P[1].key_JOY_UP_status=2; }
-	if (key_JOY1_UP_released ==1 ) { P[1].key_JOY_UP_status=3; }
+	if (key_JOY1_UP_pressed==0 && key_JOY1_UP_hold==0 && key_JOY1_UP_released==0){ P[P1].key_JOY_UP_status=0; }
+	if (key_JOY1_UP_pressed  ==1 ) { P[P1].key_JOY_UP_status=1; }
+	if (key_JOY1_UP_hold     ==1 ) { P[P1].key_JOY_UP_status=2; }
+	if (key_JOY1_UP_released ==1 ) { P[P1].key_JOY_UP_status=3; }
 	
 	if (JOY1_DOWN) {
 	if (key_JOY1_DOWN_pressed==1 && key_JOY1_DOWN_hold==0) { key_JOY1_DOWN_hold=1; key_JOY1_DOWN_pressed=0; }
@@ -2318,10 +2175,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_DOWN) {
 	if (key_JOY1_DOWN_released==1) { key_JOY1_DOWN_released=0; key_JOY1_DOWN_pressed=0; key_JOY1_DOWN_hold=0; }
 	if (key_JOY1_DOWN_pressed>0 || key_JOY1_DOWN_hold>0) {key_JOY1_DOWN_released=1;}}
-	if (key_JOY1_DOWN_pressed==0 && key_JOY1_DOWN_hold==0 && key_JOY1_DOWN_released==0){ P[1].key_JOY_DOWN_status=0; }
-	if (key_JOY1_DOWN_pressed  ==1 ) { P[1].key_JOY_DOWN_status=1; }
-	if (key_JOY1_DOWN_hold     ==1 ) { P[1].key_JOY_DOWN_status=2; }
-	if (key_JOY1_DOWN_released ==1 ) { P[1].key_JOY_DOWN_status=3; }
+	if (key_JOY1_DOWN_pressed==0 && key_JOY1_DOWN_hold==0 && key_JOY1_DOWN_released==0){ P[P1].key_JOY_DOWN_status=0; }
+	if (key_JOY1_DOWN_pressed  ==1 ) { P[P1].key_JOY_DOWN_status=1; }
+	if (key_JOY1_DOWN_hold     ==1 ) { P[P1].key_JOY_DOWN_status=2; }
+	if (key_JOY1_DOWN_released ==1 ) { P[P1].key_JOY_DOWN_status=3; }
 	
 	if (JOY1_LEFT) {
 	if (key_JOY1_LEFT_pressed==1 && key_JOY1_LEFT_hold==0) { key_JOY1_LEFT_hold=1; key_JOY1_LEFT_pressed=0; }
@@ -2329,10 +2186,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_LEFT) {
 	if (key_JOY1_LEFT_released==1) { key_JOY1_LEFT_released=0; key_JOY1_LEFT_pressed=0; key_JOY1_LEFT_hold=0; }
 	if (key_JOY1_LEFT_pressed>0 || key_JOY1_LEFT_hold>0) {key_JOY1_LEFT_released=1;}}
-	if (key_JOY1_LEFT_pressed==0 && key_JOY1_LEFT_hold==0 && key_JOY1_LEFT_released==0){ P[1].key_JOY_LEFT_status=0; }
-	if (key_JOY1_LEFT_pressed  ==1 ) { P[1].key_JOY_LEFT_status=1; }
-	if (key_JOY1_LEFT_hold     ==1 ) { P[1].key_JOY_LEFT_status=2; }
-	if (key_JOY1_LEFT_released ==1 ) { P[1].key_JOY_LEFT_status=3; }
+	if (key_JOY1_LEFT_pressed==0 && key_JOY1_LEFT_hold==0 && key_JOY1_LEFT_released==0){ P[P1].key_JOY_LEFT_status=0; }
+	if (key_JOY1_LEFT_pressed  ==1 ) { P[P1].key_JOY_LEFT_status=1; }
+	if (key_JOY1_LEFT_hold     ==1 ) { P[P1].key_JOY_LEFT_status=2; }
+	if (key_JOY1_LEFT_released ==1 ) { P[P1].key_JOY_LEFT_status=3; }
 	
 	if (JOY1_RIGHT) {
 	if (key_JOY1_RIGHT_pressed==1 && key_JOY1_RIGHT_hold==0) { key_JOY1_RIGHT_hold=1; key_JOY1_RIGHT_pressed=0; }
@@ -2340,10 +2197,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_RIGHT) {
 	if (key_JOY1_RIGHT_released==1) { key_JOY1_RIGHT_released=0; key_JOY1_RIGHT_pressed=0; key_JOY1_RIGHT_hold=0; }
 	if (key_JOY1_RIGHT_pressed>0 || key_JOY1_RIGHT_hold>0) {key_JOY1_RIGHT_released=1;}}
-	if (key_JOY1_RIGHT_pressed==0 && key_JOY1_RIGHT_hold==0 && key_JOY1_RIGHT_released==0){ P[1].key_JOY_RIGHT_status=0; }
-	if (key_JOY1_RIGHT_pressed  ==1 ) { P[1].key_JOY_RIGHT_status=1; }
-	if (key_JOY1_RIGHT_hold     ==1 ) { P[1].key_JOY_RIGHT_status=2; }
-	if (key_JOY1_RIGHT_released ==1 ) { P[1].key_JOY_RIGHT_status=3; }
+	if (key_JOY1_RIGHT_pressed==0 && key_JOY1_RIGHT_hold==0 && key_JOY1_RIGHT_released==0){ P[P1].key_JOY_RIGHT_status=0; }
+	if (key_JOY1_RIGHT_pressed  ==1 ) { P[P1].key_JOY_RIGHT_status=1; }
+	if (key_JOY1_RIGHT_hold     ==1 ) { P[P1].key_JOY_RIGHT_status=2; }
+	if (key_JOY1_RIGHT_released ==1 ) { P[P1].key_JOY_RIGHT_status=3; }
 	
 	if (JOY1_A) {
 	if (key_JOY1_A_pressed==1 && key_JOY1_A_hold==0) { key_JOY1_A_hold=1; key_JOY1_A_pressed=0; }
@@ -2351,10 +2208,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_A) {
 	if (key_JOY1_A_released==1) { key_JOY1_A_released=0; key_JOY1_A_pressed=0; key_JOY1_A_hold=0; }
 	if (key_JOY1_A_pressed>0 || key_JOY1_A_hold>0) {key_JOY1_A_released=1;}}
-	if (key_JOY1_A_pressed==0 && key_JOY1_A_hold==0 && key_JOY1_A_released==0){ P[1].key_JOY_A_status=0; }
-	if (key_JOY1_A_pressed  ==1 ) { P[1].key_JOY_A_status=1; }
-	if (key_JOY1_A_hold     ==1 ) { P[1].key_JOY_A_status=2; }
-	if (key_JOY1_A_released ==1 ) { P[1].key_JOY_A_status=3; }
+	if (key_JOY1_A_pressed==0 && key_JOY1_A_hold==0 && key_JOY1_A_released==0){ P[P1].key_JOY_A_status=0; }
+	if (key_JOY1_A_pressed  ==1 ) { P[P1].key_JOY_A_status=1; }
+	if (key_JOY1_A_hold     ==1 ) { P[P1].key_JOY_A_status=2; }
+	if (key_JOY1_A_released ==1 ) { P[P1].key_JOY_A_status=3; }
 	
 	if (JOY1_B) {
 	if (key_JOY1_B_pressed==1 && key_JOY1_B_hold==0) { key_JOY1_B_hold=1; key_JOY1_B_pressed=0; }
@@ -2362,10 +2219,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_B) {
 	if (key_JOY1_B_released==1) { key_JOY1_B_released=0; key_JOY1_B_pressed=0; key_JOY1_B_hold=0; }
 	if (key_JOY1_B_pressed>0 || key_JOY1_B_hold>0) {key_JOY1_B_released=1;}}
-	if (key_JOY1_B_pressed==0 && key_JOY1_B_hold==0 && key_JOY1_B_released==0){ P[1].key_JOY_B_status=0; }
-	if (key_JOY1_B_pressed  ==1 ) { P[1].key_JOY_B_status=1; }
-	if (key_JOY1_B_hold     ==1 ) { P[1].key_JOY_B_status=2; }
-	if (key_JOY1_B_released ==1 ) { P[1].key_JOY_B_status=3; }
+	if (key_JOY1_B_pressed==0 && key_JOY1_B_hold==0 && key_JOY1_B_released==0){ P[P1].key_JOY_B_status=0; }
+	if (key_JOY1_B_pressed  ==1 ) { P[P1].key_JOY_B_status=1; }
+	if (key_JOY1_B_hold     ==1 ) { P[P1].key_JOY_B_status=2; }
+	if (key_JOY1_B_released ==1 ) { P[P1].key_JOY_B_status=3; }
 	
 	if (JOY1_C) {
 	if (key_JOY1_C_pressed==1 && key_JOY1_C_hold==0) { key_JOY1_C_hold=1; key_JOY1_C_pressed=0; }
@@ -2373,10 +2230,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_C) {
 	if (key_JOY1_C_released==1) { key_JOY1_C_released=0; key_JOY1_C_pressed=0; key_JOY1_C_hold=0; }
 	if (key_JOY1_C_pressed>0 || key_JOY1_C_hold>0) {key_JOY1_C_released=1;}}
-	if (key_JOY1_C_pressed==0 && key_JOY1_C_hold==0 && key_JOY1_C_released==0){ P[1].key_JOY_C_status=0; }
-	if (key_JOY1_C_pressed  ==1 ) { P[1].key_JOY_C_status=1; }
-	if (key_JOY1_C_hold     ==1 ) { P[1].key_JOY_C_status=2; }
-	if (key_JOY1_C_released ==1 ) { P[1].key_JOY_C_status=3; }
+	if (key_JOY1_C_pressed==0 && key_JOY1_C_hold==0 && key_JOY1_C_released==0){ P[P1].key_JOY_C_status=0; }
+	if (key_JOY1_C_pressed  ==1 ) { P[P1].key_JOY_C_status=1; }
+	if (key_JOY1_C_hold     ==1 ) { P[P1].key_JOY_C_status=2; }
+	if (key_JOY1_C_released ==1 ) { P[P1].key_JOY_C_status=3; }
 	
 	if (JOY1_X) {
 	if (key_JOY1_X_pressed==1 && key_JOY1_X_hold==0) { key_JOY1_X_hold=1; key_JOY1_X_pressed=0; }
@@ -2384,10 +2241,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_X) {
 	if (key_JOY1_X_released==1) { key_JOY1_X_released=0; key_JOY1_X_pressed=0; key_JOY1_X_hold=0; }
 	if (key_JOY1_X_pressed>0 || key_JOY1_X_hold>0) {key_JOY1_X_released=1;}}
-	if (key_JOY1_X_pressed==0 && key_JOY1_X_hold==0 && key_JOY1_X_released==0){ P[1].key_JOY_X_status=0; }
-	if (key_JOY1_X_pressed  ==1 ) { P[1].key_JOY_X_status=1; }
-	if (key_JOY1_X_hold     ==1 ) { P[1].key_JOY_X_status=2; }
-	if (key_JOY1_X_released ==1 ) { P[1].key_JOY_X_status=3; }
+	if (key_JOY1_X_pressed==0 && key_JOY1_X_hold==0 && key_JOY1_X_released==0){ P[P1].key_JOY_X_status=0; }
+	if (key_JOY1_X_pressed  ==1 ) { P[P1].key_JOY_X_status=1; }
+	if (key_JOY1_X_hold     ==1 ) { P[P1].key_JOY_X_status=2; }
+	if (key_JOY1_X_released ==1 ) { P[P1].key_JOY_X_status=3; }
 	
 	if (JOY1_Y) {
 	if (key_JOY1_Y_pressed==1 && key_JOY1_Y_hold==0) { key_JOY1_Y_hold=1; key_JOY1_Y_pressed=0; }
@@ -2395,10 +2252,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_Y) {
 	if (key_JOY1_Y_released==1) { key_JOY1_Y_released=0; key_JOY1_Y_pressed=0; key_JOY1_Y_hold=0; }
 	if (key_JOY1_Y_pressed>0 || key_JOY1_Y_hold>0) {key_JOY1_Y_released=1;}}
-	if (key_JOY1_Y_pressed==0 && key_JOY1_Y_hold==0 && key_JOY1_Y_released==0){ P[1].key_JOY_Y_status=0; }
-	if (key_JOY1_Y_pressed  ==1 ) { P[1].key_JOY_Y_status=1; }
-	if (key_JOY1_Y_hold     ==1 ) { P[1].key_JOY_Y_status=2; }
-	if (key_JOY1_Y_released ==1 ) { P[1].key_JOY_Y_status=3; }
+	if (key_JOY1_Y_pressed==0 && key_JOY1_Y_hold==0 && key_JOY1_Y_released==0){ P[P1].key_JOY_Y_status=0; }
+	if (key_JOY1_Y_pressed  ==1 ) { P[P1].key_JOY_Y_status=1; }
+	if (key_JOY1_Y_hold     ==1 ) { P[P1].key_JOY_Y_status=2; }
+	if (key_JOY1_Y_released ==1 ) { P[P1].key_JOY_Y_status=3; }
 	
 	if (JOY1_Z) {
 	if (key_JOY1_Z_pressed==1 && key_JOY1_Z_hold==0) { key_JOY1_Z_hold=1; key_JOY1_Z_pressed=0; }
@@ -2406,10 +2263,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_Z) {
 	if (key_JOY1_Z_released==1) { key_JOY1_Z_released=0; key_JOY1_Z_pressed=0; key_JOY1_Z_hold=0; }
 	if (key_JOY1_Z_pressed>0 || key_JOY1_Z_hold>0) {key_JOY1_Z_released=1;}}
-	if (key_JOY1_Z_pressed==0 && key_JOY1_Z_hold==0 && key_JOY1_Z_released==0){ P[1].key_JOY_Z_status=0; }
-	if (key_JOY1_Z_pressed  ==1 ) { P[1].key_JOY_Z_status=1; }
-	if (key_JOY1_Z_hold     ==1 ) { P[1].key_JOY_Z_status=2; }
-	if (key_JOY1_Z_released ==1 ) { P[1].key_JOY_Z_status=3; }
+	if (key_JOY1_Z_pressed==0 && key_JOY1_Z_hold==0 && key_JOY1_Z_released==0){ P[P1].key_JOY_Z_status=0; }
+	if (key_JOY1_Z_pressed  ==1 ) { P[P1].key_JOY_Z_status=1; }
+	if (key_JOY1_Z_hold     ==1 ) { P[P1].key_JOY_Z_status=2; }
+	if (key_JOY1_Z_released ==1 ) { P[P1].key_JOY_Z_status=3; }
 	
 	if (JOY1_START) {
 	if (key_JOY1_START_pressed==1 && key_JOY1_START_hold==0) { key_JOY1_START_hold=1; key_JOY1_START_pressed=0; }
@@ -2417,10 +2274,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_START) {
 	if (key_JOY1_START_released==1) { key_JOY1_START_released=0; key_JOY1_START_pressed=0; key_JOY1_START_hold=0; }
 	if (key_JOY1_START_pressed>0 || key_JOY1_START_hold>0) {key_JOY1_START_released=1;}}
-	if (key_JOY1_START_pressed==0 && key_JOY1_START_hold==0 && key_JOY1_START_released==0){ P[1].key_JOY_START_status=0; }
-	if (key_JOY1_START_pressed  ==1 ) { P[1].key_JOY_START_status=1; }
-	if (key_JOY1_START_hold     ==1 ) { P[1].key_JOY_START_status=2; }
-	if (key_JOY1_START_released ==1 ) { P[1].key_JOY_START_status=3; }
+	if (key_JOY1_START_pressed==0 && key_JOY1_START_hold==0 && key_JOY1_START_released==0){ P[P1].key_JOY_START_status=0; }
+	if (key_JOY1_START_pressed  ==1 ) { P[P1].key_JOY_START_status=1; }
+	if (key_JOY1_START_hold     ==1 ) { P[P1].key_JOY_START_status=2; }
+	if (key_JOY1_START_released ==1 ) { P[P1].key_JOY_START_status=3; }
 	
 	if (JOY1_MODE) {
 	if (key_JOY1_MODE_pressed==1 && key_JOY1_MODE_hold==0) { key_JOY1_MODE_hold=1; key_JOY1_MODE_pressed=0; }
@@ -2428,10 +2285,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY1_MODE) {
 	if (key_JOY1_MODE_released==1) { key_JOY1_MODE_released=0; key_JOY1_MODE_pressed=0; key_JOY1_MODE_hold=0; }
 	if (key_JOY1_MODE_pressed>0 || key_JOY1_MODE_hold>0) {key_JOY1_MODE_released=1;}}
-	if (key_JOY1_MODE_pressed==0 && key_JOY1_MODE_hold==0 && key_JOY1_MODE_released==0){ P[1].key_JOY_MODE_status=0; }
-	if (key_JOY1_MODE_pressed  ==1 ) { P[1].key_JOY_MODE_status=1; }
-	if (key_JOY1_MODE_hold     ==1 ) { P[1].key_JOY_MODE_status=2; }
-	if (key_JOY1_MODE_released ==1 ) { P[1].key_JOY_MODE_status=3; }
+	if (key_JOY1_MODE_pressed==0 && key_JOY1_MODE_hold==0 && key_JOY1_MODE_released==0){ P[P1].key_JOY_MODE_status=0; }
+	if (key_JOY1_MODE_pressed  ==1 ) { P[P1].key_JOY_MODE_status=1; }
+	if (key_JOY1_MODE_hold     ==1 ) { P[P1].key_JOY_MODE_status=2; }
+	if (key_JOY1_MODE_released ==1 ) { P[P1].key_JOY_MODE_status=3; }
 	
 	//---P2
 	
@@ -2441,10 +2298,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_UP) {
 	if (key_JOY2_UP_released==1) { key_JOY2_UP_released=0; key_JOY2_UP_pressed=0; key_JOY2_UP_hold=0; }
 	if (key_JOY2_UP_pressed>0 || key_JOY2_UP_hold>0) {key_JOY2_UP_released=1;}}
-	if (key_JOY2_UP_pressed==0 && key_JOY2_UP_hold==0 && key_JOY2_UP_released==0){ P[2].key_JOY_UP_status=0; }
-	if (key_JOY2_UP_pressed  ==1 ) { P[2].key_JOY_UP_status=1; }
-	if (key_JOY2_UP_hold     ==1 ) { P[2].key_JOY_UP_status=2; }
-	if (key_JOY2_UP_released ==1 ) { P[2].key_JOY_UP_status=3; }
+	if (key_JOY2_UP_pressed==0 && key_JOY2_UP_hold==0 && key_JOY2_UP_released==0){ P[P2].key_JOY_UP_status=0; }
+	if (key_JOY2_UP_pressed  ==1 ) { P[P2].key_JOY_UP_status=1; }
+	if (key_JOY2_UP_hold     ==1 ) { P[P2].key_JOY_UP_status=2; }
+	if (key_JOY2_UP_released ==1 ) { P[P2].key_JOY_UP_status=3; }
 	
 	if (JOY2_DOWN) {
 	if (key_JOY2_DOWN_pressed==1 && key_JOY2_DOWN_hold==0) { key_JOY2_DOWN_hold=1; key_JOY2_DOWN_pressed=0; }
@@ -2452,10 +2309,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_DOWN) {
 	if (key_JOY2_DOWN_released==1) { key_JOY2_DOWN_released=0; key_JOY2_DOWN_pressed=0; key_JOY2_DOWN_hold=0; }
 	if (key_JOY2_DOWN_pressed>0 || key_JOY2_DOWN_hold>0) {key_JOY2_DOWN_released=1;}}
-	if (key_JOY2_DOWN_pressed==0 && key_JOY2_DOWN_hold==0 && key_JOY2_DOWN_released==0){ P[2].key_JOY_DOWN_status=0; }
-	if (key_JOY2_DOWN_pressed  ==1 ) { P[2].key_JOY_DOWN_status=1; }
-	if (key_JOY2_DOWN_hold     ==1 ) { P[2].key_JOY_DOWN_status=2; }
-	if (key_JOY2_DOWN_released ==1 ) { P[2].key_JOY_DOWN_status=3; }
+	if (key_JOY2_DOWN_pressed==0 && key_JOY2_DOWN_hold==0 && key_JOY2_DOWN_released==0){ P[P2].key_JOY_DOWN_status=0; }
+	if (key_JOY2_DOWN_pressed  ==1 ) { P[P2].key_JOY_DOWN_status=1; }
+	if (key_JOY2_DOWN_hold     ==1 ) { P[P2].key_JOY_DOWN_status=2; }
+	if (key_JOY2_DOWN_released ==1 ) { P[P2].key_JOY_DOWN_status=3; }
 	
 	if (JOY2_LEFT) {
 	if (key_JOY2_LEFT_pressed==1 && key_JOY2_LEFT_hold==0) { key_JOY2_LEFT_hold=1; key_JOY2_LEFT_pressed=0; }
@@ -2463,10 +2320,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_LEFT) {
 	if (key_JOY2_LEFT_released==1) { key_JOY2_LEFT_released=0; key_JOY2_LEFT_pressed=0; key_JOY2_LEFT_hold=0; }
 	if (key_JOY2_LEFT_pressed>0 || key_JOY2_LEFT_hold>0) {key_JOY2_LEFT_released=1;}}
-	if (key_JOY2_LEFT_pressed==0 && key_JOY2_LEFT_hold==0 && key_JOY2_LEFT_released==0){ P[2].key_JOY_LEFT_status=0; }
-	if (key_JOY2_LEFT_pressed  ==1 ) { P[2].key_JOY_LEFT_status=1; }
-	if (key_JOY2_LEFT_hold     ==1 ) { P[2].key_JOY_LEFT_status=2; }
-	if (key_JOY2_LEFT_released ==1 ) { P[2].key_JOY_LEFT_status=3; }
+	if (key_JOY2_LEFT_pressed==0 && key_JOY2_LEFT_hold==0 && key_JOY2_LEFT_released==0){ P[P2].key_JOY_LEFT_status=0; }
+	if (key_JOY2_LEFT_pressed  ==1 ) { P[P2].key_JOY_LEFT_status=1; }
+	if (key_JOY2_LEFT_hold     ==1 ) { P[P2].key_JOY_LEFT_status=2; }
+	if (key_JOY2_LEFT_released ==1 ) { P[P2].key_JOY_LEFT_status=3; }
 	
 	if (JOY2_RIGHT) {
 	if (key_JOY2_RIGHT_pressed==1 && key_JOY2_RIGHT_hold==0) { key_JOY2_RIGHT_hold=1; key_JOY2_RIGHT_pressed=0; }
@@ -2474,10 +2331,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_RIGHT) {
 	if (key_JOY2_RIGHT_released==1) { key_JOY2_RIGHT_released=0; key_JOY2_RIGHT_pressed=0; key_JOY2_RIGHT_hold=0; }
 	if (key_JOY2_RIGHT_pressed>0 || key_JOY2_RIGHT_hold>0) {key_JOY2_RIGHT_released=1;}}
-	if (key_JOY2_RIGHT_pressed==0 && key_JOY2_RIGHT_hold==0 && key_JOY2_RIGHT_released==0){ P[2].key_JOY_RIGHT_status=0; }
-	if (key_JOY2_RIGHT_pressed  ==1 ) { P[2].key_JOY_RIGHT_status=1; }
-	if (key_JOY2_RIGHT_hold     ==1 ) { P[2].key_JOY_RIGHT_status=2; }
-	if (key_JOY2_RIGHT_released ==1 ) { P[2].key_JOY_RIGHT_status=3; }
+	if (key_JOY2_RIGHT_pressed==0 && key_JOY2_RIGHT_hold==0 && key_JOY2_RIGHT_released==0){ P[P2].key_JOY_RIGHT_status=0; }
+	if (key_JOY2_RIGHT_pressed  ==1 ) { P[P2].key_JOY_RIGHT_status=1; }
+	if (key_JOY2_RIGHT_hold     ==1 ) { P[P2].key_JOY_RIGHT_status=2; }
+	if (key_JOY2_RIGHT_released ==1 ) { P[P2].key_JOY_RIGHT_status=3; }
 	
 	if (JOY2_A) {
 	if (key_JOY2_A_pressed==1 && key_JOY2_A_hold==0) { key_JOY2_A_hold=1; key_JOY2_A_pressed=0; }
@@ -2485,10 +2342,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_A) {
 	if (key_JOY2_A_released==1) { key_JOY2_A_released=0; key_JOY2_A_pressed=0; key_JOY2_A_hold=0; }
 	if (key_JOY2_A_pressed>0 || key_JOY2_A_hold>0) {key_JOY2_A_released=1;}}
-	if (key_JOY2_A_pressed==0 && key_JOY2_A_hold==0 && key_JOY2_A_released==0){ P[2].key_JOY_A_status=0; }
-	if (key_JOY2_A_pressed  ==1 ) { P[2].key_JOY_A_status=1; }
-	if (key_JOY2_A_hold     ==1 ) { P[2].key_JOY_A_status=2; }
-	if (key_JOY2_A_released ==1 ) { P[2].key_JOY_A_status=3; }
+	if (key_JOY2_A_pressed==0 && key_JOY2_A_hold==0 && key_JOY2_A_released==0){ P[P2].key_JOY_A_status=0; }
+	if (key_JOY2_A_pressed  ==1 ) { P[P2].key_JOY_A_status=1; }
+	if (key_JOY2_A_hold     ==1 ) { P[P2].key_JOY_A_status=2; }
+	if (key_JOY2_A_released ==1 ) { P[P2].key_JOY_A_status=3; }
 	
 	if (JOY2_B) {
 	if (key_JOY2_B_pressed==1 && key_JOY2_B_hold==0) { key_JOY2_B_hold=1; key_JOY2_B_pressed=0; }
@@ -2496,10 +2353,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_B) {
 	if (key_JOY2_B_released==1) { key_JOY2_B_released=0; key_JOY2_B_pressed=0; key_JOY2_B_hold=0; }
 	if (key_JOY2_B_pressed>0 || key_JOY2_B_hold>0) {key_JOY2_B_released=1;}}
-	if (key_JOY2_B_pressed==0 && key_JOY2_B_hold==0 && key_JOY2_B_released==0){ P[2].key_JOY_B_status=0; }
-	if (key_JOY2_B_pressed  ==1 ) { P[2].key_JOY_B_status=1; }
-	if (key_JOY2_B_hold     ==1 ) { P[2].key_JOY_B_status=2; }
-	if (key_JOY2_B_released ==1 ) { P[2].key_JOY_B_status=3; }
+	if (key_JOY2_B_pressed==0 && key_JOY2_B_hold==0 && key_JOY2_B_released==0){ P[P2].key_JOY_B_status=0; }
+	if (key_JOY2_B_pressed  ==1 ) { P[P2].key_JOY_B_status=1; }
+	if (key_JOY2_B_hold     ==1 ) { P[P2].key_JOY_B_status=2; }
+	if (key_JOY2_B_released ==1 ) { P[P2].key_JOY_B_status=3; }
 	
 	if (JOY2_C) {
 	if (key_JOY2_C_pressed==1 && key_JOY2_C_hold==0) { key_JOY2_C_hold=1; key_JOY2_C_pressed=0; }
@@ -2507,10 +2364,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_C) {
 	if (key_JOY2_C_released==1) { key_JOY2_C_released=0; key_JOY2_C_pressed=0; key_JOY2_C_hold=0; }
 	if (key_JOY2_C_pressed>0 || key_JOY2_C_hold>0) {key_JOY2_C_released=1;}}
-	if (key_JOY2_C_pressed==0 && key_JOY2_C_hold==0 && key_JOY2_C_released==0){ P[2].key_JOY_C_status=0; }
-	if (key_JOY2_C_pressed  ==1 ) { P[2].key_JOY_C_status=1; }
-	if (key_JOY2_C_hold     ==1 ) { P[2].key_JOY_C_status=2; }
-	if (key_JOY2_C_released ==1 ) { P[2].key_JOY_C_status=3; }
+	if (key_JOY2_C_pressed==0 && key_JOY2_C_hold==0 && key_JOY2_C_released==0){ P[P2].key_JOY_C_status=0; }
+	if (key_JOY2_C_pressed  ==1 ) { P[P2].key_JOY_C_status=1; }
+	if (key_JOY2_C_hold     ==1 ) { P[P2].key_JOY_C_status=2; }
+	if (key_JOY2_C_released ==1 ) { P[P2].key_JOY_C_status=3; }
 	
 	if (JOY2_X) {
 	if (key_JOY2_X_pressed==1 && key_JOY2_X_hold==0) { key_JOY2_X_hold=1; key_JOY2_X_pressed=0; }
@@ -2518,10 +2375,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_X) {
 	if (key_JOY2_X_released==1) { key_JOY2_X_released=0; key_JOY2_X_pressed=0; key_JOY2_X_hold=0; }
 	if (key_JOY2_X_pressed>0 || key_JOY2_X_hold>0) {key_JOY2_X_released=1;}}
-	if (key_JOY2_X_pressed==0 && key_JOY2_X_hold==0 && key_JOY2_X_released==0){ P[2].key_JOY_X_status=0; }
-	if (key_JOY2_X_pressed  ==1 ) { P[2].key_JOY_X_status=1; }
-	if (key_JOY2_X_hold     ==1 ) { P[2].key_JOY_X_status=2; }
-	if (key_JOY2_X_released ==1 ) { P[2].key_JOY_X_status=3; }
+	if (key_JOY2_X_pressed==0 && key_JOY2_X_hold==0 && key_JOY2_X_released==0){ P[P2].key_JOY_X_status=0; }
+	if (key_JOY2_X_pressed  ==1 ) { P[P2].key_JOY_X_status=1; }
+	if (key_JOY2_X_hold     ==1 ) { P[P2].key_JOY_X_status=2; }
+	if (key_JOY2_X_released ==1 ) { P[P2].key_JOY_X_status=3; }
 	
 	if (JOY2_Y) {
 	if (key_JOY2_Y_pressed==1 && key_JOY2_Y_hold==0) { key_JOY2_Y_hold=1; key_JOY2_Y_pressed=0; }
@@ -2529,10 +2386,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_Y) {
 	if (key_JOY2_Y_released==1) { key_JOY2_Y_released=0; key_JOY2_Y_pressed=0; key_JOY2_Y_hold=0; }
 	if (key_JOY2_Y_pressed>0 || key_JOY2_Y_hold>0) {key_JOY2_Y_released=1;}}
-	if (key_JOY2_Y_pressed==0 && key_JOY2_Y_hold==0 && key_JOY2_Y_released==0){ P[2].key_JOY_Y_status=0; }
-	if (key_JOY2_Y_pressed  ==1 ) { P[2].key_JOY_Y_status=1; }
-	if (key_JOY2_Y_hold     ==1 ) { P[2].key_JOY_Y_status=2; }
-	if (key_JOY2_Y_released ==1 ) { P[2].key_JOY_Y_status=3; }
+	if (key_JOY2_Y_pressed==0 && key_JOY2_Y_hold==0 && key_JOY2_Y_released==0){ P[P2].key_JOY_Y_status=0; }
+	if (key_JOY2_Y_pressed  ==1 ) { P[P2].key_JOY_Y_status=1; }
+	if (key_JOY2_Y_hold     ==1 ) { P[P2].key_JOY_Y_status=2; }
+	if (key_JOY2_Y_released ==1 ) { P[P2].key_JOY_Y_status=3; }
 	
 	if (JOY2_Z) {
 	if (key_JOY2_Z_pressed==1 && key_JOY2_Z_hold==0) { key_JOY2_Z_hold=1; key_JOY2_Z_pressed=0; }
@@ -2540,10 +2397,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_Z) {
 	if (key_JOY2_Z_released==1) { key_JOY2_Z_released=0; key_JOY2_Z_pressed=0; key_JOY2_Z_hold=0; }
 	if (key_JOY2_Z_pressed>0 || key_JOY2_Z_hold>0) {key_JOY2_Z_released=1;}}
-	if (key_JOY2_Z_pressed==0 && key_JOY2_Z_hold==0 && key_JOY2_Z_released==0){ P[2].key_JOY_Z_status=0; }
-	if (key_JOY2_Z_pressed  ==1 ) { P[2].key_JOY_Z_status=1; }
-	if (key_JOY2_Z_hold     ==1 ) { P[2].key_JOY_Z_status=2; }
-	if (key_JOY2_Z_released ==1 ) { P[2].key_JOY_Z_status=3; }
+	if (key_JOY2_Z_pressed==0 && key_JOY2_Z_hold==0 && key_JOY2_Z_released==0){ P[P2].key_JOY_Z_status=0; }
+	if (key_JOY2_Z_pressed  ==1 ) { P[P2].key_JOY_Z_status=1; }
+	if (key_JOY2_Z_hold     ==1 ) { P[P2].key_JOY_Z_status=2; }
+	if (key_JOY2_Z_released ==1 ) { P[P2].key_JOY_Z_status=3; }
 	
 	if (JOY2_START) {
 	if (key_JOY2_START_pressed==1 && key_JOY2_START_hold==0) { key_JOY2_START_hold=1; key_JOY2_START_pressed=0; }
@@ -2551,10 +2408,10 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_START) {
 	if (key_JOY2_START_released==1) { key_JOY2_START_released=0; key_JOY2_START_pressed=0; key_JOY2_START_hold=0; }
 	if (key_JOY2_START_pressed>0 || key_JOY2_START_hold>0) {key_JOY2_START_released=1;}}
-	if (key_JOY2_START_pressed==0 && key_JOY2_START_hold==0 && key_JOY2_START_released==0){ P[2].key_JOY_START_status=0; }
-	if (key_JOY2_START_pressed  ==1 ) { P[2].key_JOY_START_status=1; }
-	if (key_JOY2_START_hold     ==1 ) { P[2].key_JOY_START_status=2; }
-	if (key_JOY2_START_released ==1 ) { P[2].key_JOY_START_status=3; }
+	if (key_JOY2_START_pressed==0 && key_JOY2_START_hold==0 && key_JOY2_START_released==0){ P[P2].key_JOY_START_status=0; }
+	if (key_JOY2_START_pressed  ==1 ) { P[P2].key_JOY_START_status=1; }
+	if (key_JOY2_START_hold     ==1 ) { P[P2].key_JOY_START_status=2; }
+	if (key_JOY2_START_released ==1 ) { P[P2].key_JOY_START_status=3; }
 	
 	if (JOY2_MODE) {
 	if (key_JOY2_MODE_pressed==1 && key_JOY2_MODE_hold==0) { key_JOY2_MODE_hold=1; key_JOY2_MODE_pressed=0; }
@@ -2562,96 +2419,96 @@ void FUNCAO_INPUT_SYSTEM()
 	if (!JOY2_MODE) {
 	if (key_JOY2_MODE_released==1) { key_JOY2_MODE_released=0; key_JOY2_MODE_pressed=0; key_JOY2_MODE_hold=0; }
 	if (key_JOY2_MODE_pressed>0 || key_JOY2_MODE_hold>0) {key_JOY2_MODE_released=1;}}
-	if (key_JOY2_MODE_pressed==0 && key_JOY2_MODE_hold==0 && key_JOY2_MODE_released==0){ P[2].key_JOY_MODE_status=0; }
-	if (key_JOY2_MODE_pressed  ==1 ) { P[2].key_JOY_MODE_status=1; }
-	if (key_JOY2_MODE_hold     ==1 ) { P[2].key_JOY_MODE_status=2; }
-	if (key_JOY2_MODE_released ==1 ) { P[2].key_JOY_MODE_status=3; }
+	if (key_JOY2_MODE_pressed==0 && key_JOY2_MODE_hold==0 && key_JOY2_MODE_released==0){ P[P2].key_JOY_MODE_status=0; }
+	if (key_JOY2_MODE_pressed  ==1 ) { P[P2].key_JOY_MODE_status=1; }
+	if (key_JOY2_MODE_hold     ==1 ) { P[P2].key_JOY_MODE_status=2; }
+	if (key_JOY2_MODE_released ==1 ) { P[P2].key_JOY_MODE_status=3; }
 	
 	//---InputTimerCountDown; InputArray
 	u8 dir=0;
 	
-	if(P[1].key_JOY_UP_status   ==1){ P[1].joyDirTimer[8]=gInputTimerCountDown+1; dir=8; }
-	if(P[1].key_JOY_DOWN_status ==1){ P[1].joyDirTimer[2]=gInputTimerCountDown+1; dir=2; }
-	if(P[1].key_JOY_LEFT_status ==1){ P[1].joyDirTimer[4]=gInputTimerCountDown+1; dir=4; }
-	if(P[1].key_JOY_RIGHT_status==1){ P[1].joyDirTimer[6]=gInputTimerCountDown+1; dir=6; }
+	if(P[P1].key_JOY_UP_status   ==1){ P[P1].joyDirTimer[8]=gInputTimerCountDown+1; dir=8; }
+	if(P[P1].key_JOY_DOWN_status ==1){ P[P1].joyDirTimer[2]=gInputTimerCountDown+1; dir=2; }
+	if(P[P1].key_JOY_LEFT_status ==1){ P[P1].joyDirTimer[4]=gInputTimerCountDown+1; dir=4; }
+	if(P[P1].key_JOY_RIGHT_status==1){ P[P1].joyDirTimer[6]=gInputTimerCountDown+1; dir=6; }
 	
 	if(dir!=0)
 	{
-		P[1].inputArray[4] = P[1].inputArray[3];
-		P[1].inputArray[3] = P[1].inputArray[2];
-		P[1].inputArray[2] = P[1].inputArray[1];
-		P[1].inputArray[1] = P[1].inputArray[0];
-		P[1].inputArray[0] = dir;
+		P[P1].inputArray[4] = P[P1].inputArray[3];
+		P[P1].inputArray[3] = P[P1].inputArray[2];
+		P[P1].inputArray[2] = P[P1].inputArray[1];
+		P[P1].inputArray[1] = P[P1].inputArray[0];
+		P[P1].inputArray[0] = dir;
 	}
 	
 	dir=0;
 	
-	if(P[2].key_JOY_UP_status   ==1){ P[2].joyDirTimer[8]=gInputTimerCountDown+1; dir=8; }
-	if(P[2].key_JOY_DOWN_status ==1){ P[2].joyDirTimer[2]=gInputTimerCountDown+1; dir=2; }
-	if(P[2].key_JOY_LEFT_status ==1){ P[2].joyDirTimer[4]=gInputTimerCountDown+1; dir=4; }
-	if(P[2].key_JOY_RIGHT_status==1){ P[2].joyDirTimer[6]=gInputTimerCountDown+1; dir=6; }
+	if(P[P2].key_JOY_UP_status   ==1){ P[P2].joyDirTimer[8]=gInputTimerCountDown+1; dir=8; }
+	if(P[P2].key_JOY_DOWN_status ==1){ P[P2].joyDirTimer[2]=gInputTimerCountDown+1; dir=2; }
+	if(P[P2].key_JOY_LEFT_status ==1){ P[P2].joyDirTimer[4]=gInputTimerCountDown+1; dir=4; }
+	if(P[P2].key_JOY_RIGHT_status==1){ P[P2].joyDirTimer[6]=gInputTimerCountDown+1; dir=6; }
 	
 	if(dir!=0)
 	{
-		P[2].inputArray[4] = P[2].inputArray[3];
-		P[2].inputArray[3] = P[2].inputArray[2];
-		P[2].inputArray[2] = P[2].inputArray[1];
-		P[2].inputArray[1] = P[2].inputArray[0];
-		P[2].inputArray[0] = dir;
+		P[P2].inputArray[4] = P[P2].inputArray[3];
+		P[P2].inputArray[3] = P[P2].inputArray[2];
+		P[P2].inputArray[2] = P[P2].inputArray[1];
+		P[P2].inputArray[1] = P[P2].inputArray[0];
+		P[P2].inputArray[0] = dir;
 	}
 	
-	if(P[1].hitPause==0)
+	if(P[P1].hitPause==0)
 	{
-		if( P[1].joyDirTimer[8]>0 ){ P[1].joyDirTimer[8]--; }
-		if( P[1].joyDirTimer[2]>0 ){ P[1].joyDirTimer[2]--; }
-		if( P[1].joyDirTimer[4]>0 ){ P[1].joyDirTimer[4]--; }
-		if( P[1].joyDirTimer[6]>0 ){ P[1].joyDirTimer[6]--; }	
+		if( P[P1].joyDirTimer[8]>0 ){ P[P1].joyDirTimer[8]--; }
+		if( P[P1].joyDirTimer[2]>0 ){ P[P1].joyDirTimer[2]--; }
+		if( P[P1].joyDirTimer[4]>0 ){ P[P1].joyDirTimer[4]--; }
+		if( P[P1].joyDirTimer[6]>0 ){ P[P1].joyDirTimer[6]--; }	
 	}
 	
-	if(P[2].hitPause==0)
+	if(P[P2].hitPause==0)
 	{
-		if( P[2].joyDirTimer[8]>0 ){ P[2].joyDirTimer[8]--; }
-		if( P[2].joyDirTimer[2]>0 ){ P[2].joyDirTimer[2]--; }
-		if( P[2].joyDirTimer[4]>0 ){ P[2].joyDirTimer[4]--; }
-		if( P[2].joyDirTimer[6]>0 ){ P[2].joyDirTimer[6]--; }	
+		if( P[P2].joyDirTimer[8]>0 ){ P[P2].joyDirTimer[8]--; }
+		if( P[P2].joyDirTimer[2]>0 ){ P[P2].joyDirTimer[2]--; }
+		if( P[P2].joyDirTimer[4]>0 ){ P[P2].joyDirTimer[4]--; }
+		if( P[P2].joyDirTimer[6]>0 ){ P[P2].joyDirTimer[6]--; }	
 	}
 	
 	//---AttackPower & AttackButton
-	//P[1].attackPower =0;
-	P[1].attackButton=0;
-	//P[2].attackPower =0;
-	P[2].attackButton=0;
+	//P[P1].attackPower =0;
+	P[P1].attackButton=0;
+	//P[P2].attackPower =0;
+	P[P2].attackButton=0;
 	
-	if(P[1].key_JOY_A_status==1){ P[1].attackPower=1; P[1].attackButton=4; }
-	if(P[1].key_JOY_B_status==1){ P[1].attackPower=2; P[1].attackButton=5; }
-	if(P[1].key_JOY_C_status==1){ /*P[1].attackPower=3;*/ P[1].attackButton=6; }
-	if(P[1].key_JOY_X_status==1){ P[1].attackPower=1; P[1].attackButton=1; }
-	if(P[1].key_JOY_Y_status==1){ P[1].attackPower=2; P[1].attackButton=2; }
-	if(P[1].key_JOY_Z_status==1){ /*P[1].attackPower=3;*/ P[1].attackButton=3; }
+	if(P[P1].key_JOY_A_status==1){ P[P1].attackPower=1; P[P1].attackButton=4; }
+	if(P[P1].key_JOY_B_status==1){ P[P1].attackPower=2; P[P1].attackButton=5; }
+	if(P[P1].key_JOY_C_status==1){ /*P[P1].attackPower=3;*/ P[P1].attackButton=6; }
+	if(P[P1].key_JOY_X_status==1){ P[P1].attackPower=1; P[P1].attackButton=1; }
+	if(P[P1].key_JOY_Y_status==1){ P[P1].attackPower=2; P[P1].attackButton=2; }
+	if(P[P1].key_JOY_Z_status==1){ /*P[P1].attackPower=3;*/ P[P1].attackButton=3; }
 	
-	if(P[2].key_JOY_A_status==1){ P[2].attackPower=1; P[2].attackButton=4; }
-	if(P[2].key_JOY_B_status==1){ P[2].attackPower=2; P[2].attackButton=5; }
-	if(P[2].key_JOY_C_status==1){ /*P[2].attackPower=3;*/ P[2].attackButton=6; }
-	if(P[2].key_JOY_X_status==1){ P[2].attackPower=1; P[2].attackButton=1; }
-	if(P[2].key_JOY_Y_status==1){ P[2].attackPower=2; P[2].attackButton=2; }
-	if(P[2].key_JOY_Z_status==1){ /*P[2].attackPower=3;*/ P[2].attackButton=3; }
+	if(P[P2].key_JOY_A_status==1){ P[P2].attackPower=1; P[P2].attackButton=4; }
+	if(P[P2].key_JOY_B_status==1){ P[P2].attackPower=2; P[P2].attackButton=5; }
+	if(P[P2].key_JOY_C_status==1){ /*P[P2].attackPower=3;*/ P[P2].attackButton=6; }
+	if(P[P2].key_JOY_X_status==1){ P[P2].attackPower=1; P[P2].attackButton=1; }
+	if(P[P2].key_JOY_Y_status==1){ P[P2].attackPower=2; P[P2].attackButton=2; }
+	if(P[P2].key_JOY_Z_status==1){ /*P[P2].attackPower=3;*/ P[P2].attackButton=3; }
 	//---
-	if((P[1].key_JOY_MODE_status>=1 && P[1].key_JOY_START_status==1) && gDebug==0) //Ativa o Debug com P1_MODE
+	if((P[P1].key_JOY_MODE_status>=1 && P[P1].key_JOY_START_status==1) && gDebug==0) //Ativa o Debug com P1_MODE
 	{ 
 		gDebug=1; 
-		P[1].key_JOY_MODE_status=0; 
-		P[1].key_JOY_START_status=0; 
+		P[P1].key_JOY_MODE_status=0; 
+		P[P1].key_JOY_START_status=0; 
 		if(RELEASE==0)
 		{
 			SPR_setVisibility(GE[1].sprite, VISIBLE);
 			SPR_setVisibility(GE[2].sprite, VISIBLE);
 		}
 	} 
-	if((P[1].key_JOY_MODE_status>=1 && P[1].key_JOY_START_status==1) && gDebug==1) //Desativa o Debug com P1_MODE
+	if((P[P1].key_JOY_MODE_status>=1 && P[P1].key_JOY_START_status==1) && gDebug==1) //Desativa o Debug com P1_MODE
 	{ 
 		gDebug=0; 
-		P[1].key_JOY_MODE_status=0; 
-		P[1].key_JOY_START_status=0; 
+		P[P1].key_JOY_MODE_status=0; 
+		P[P1].key_JOY_START_status=0; 
 		VDP_drawText("                              ", 1, 1);
 		VDP_drawText("                              ", 1, 2);
 		VDP_drawText("                              ", 1, 3);
@@ -2671,69 +2528,69 @@ void FUNCAO_INPUT_SYSTEM()
 	//---
 	
 	// Troca de Paleta
-	if(P[1].key_JOY_MODE_status==1)
+	if(P[P1].key_JOY_MODE_status==1)
 	{
-		if( (P[1].id==P[2].id) && P[1].palID==P[2].palID-1){ P[1].palID++; } //evita paleta repetida in game
+		if( (P[P1].id==P[P2].id) && P[P1].palID==P[P2].palID-1){ P[P1].palID++; } //evita paleta repetida in game
 		
-		if(P[1].id==1) //haohmaru
+		if(P[P1].id==1) //haohmaru
 		{
 			/*
-			if(      P[1].palID==1){ PAL_setPalette(PAL2, spr_haohmaru_pal2_1a.palette->data, DMA); P[1].palID=2; 
-			}else if(P[1].palID==2){ PAL_setPalette(PAL2, spr_haohmaru_pal3_1a.palette->data, DMA); P[1].palID=3; 
-			}else if(P[1].palID==3){ PAL_setPalette(PAL2, spr_haohmaru_pal4_1a.palette->data, DMA); P[1].palID=4; 
-			}else if(P[1].palID==4){ PAL_setPalette(PAL2, spr_haohmaru_pal5_1a.palette->data, DMA); P[1].palID=5; 
-			}else if(P[1].palID==5){ PAL_setPalette(PAL2, spr_haohmaru_pal6_1a.palette->data, DMA); P[1].palID=6; 
-			}else if(P[1].palID==6){ PAL_setPalette(PAL2, spr_haohmaru_pal7_1a.palette->data, DMA); P[1].palID=7; 
-			}else if(P[1].palID==7){ PAL_setPalette(PAL2, spr_haohmaru_pal8_1a.palette->data, DMA); P[1].palID=8; 
-			}else if(P[1].palID==8){ PAL_setPalette(PAL2, spr_haohmaru_pal1_1a.palette->data, DMA); P[1].palID=1; 
+			if(      P[P1].palID==1){ PAL_setPalette(PAL2, spr_haohmaru_pal2_1a.palette->data, DMA); P[P1].palID=2; 
+			}else if(P[P1].palID==2){ PAL_setPalette(PAL2, spr_haohmaru_pal3_1a.palette->data, DMA); P[P1].palID=3; 
+			}else if(P[P1].palID==3){ PAL_setPalette(PAL2, spr_haohmaru_pal4_1a.palette->data, DMA); P[P1].palID=4; 
+			}else if(P[P1].palID==4){ PAL_setPalette(PAL2, spr_haohmaru_pal5_1a.palette->data, DMA); P[P1].palID=5; 
+			}else if(P[P1].palID==5){ PAL_setPalette(PAL2, spr_haohmaru_pal6_1a.palette->data, DMA); P[P1].palID=6; 
+			}else if(P[P1].palID==6){ PAL_setPalette(PAL2, spr_haohmaru_pal7_1a.palette->data, DMA); P[P1].palID=7; 
+			}else if(P[P1].palID==7){ PAL_setPalette(PAL2, spr_haohmaru_pal8_1a.palette->data, DMA); P[P1].palID=8; 
+			}else if(P[P1].palID==8){ PAL_setPalette(PAL2, spr_haohmaru_pal1_1a.palette->data, DMA); P[P1].palID=1; 
 			}
 			*/
 		}
-		if(P[1].id==2) //gillius
+		if(P[P1].id==2) //gillius
 		{
 			/*
-			if(      P[1].palID==1){ PAL_setPalette(PAL2, spr_gillius_pal2.palette->data, DMA); P[1].palID=2; 
-			}else if(P[1].palID==2){ PAL_setPalette(PAL2, spr_gillius_pal3.palette->data, DMA); P[1].palID=3;
-			}else if(P[1].palID==3){ PAL_setPalette(PAL2, spr_gillius_pal4.palette->data, DMA); P[1].palID=4;
-			}else if(P[1].palID==4){ PAL_setPalette(PAL2, spr_gillius_pal5.palette->data, DMA); P[1].palID=5;
-			}else if(P[1].palID==5){ PAL_setPalette(PAL2, spr_gillius_pal6.palette->data, DMA); P[1].palID=6;
-			}else if(P[1].palID==6){ PAL_setPalette(PAL2, spr_gillius_pal7.palette->data, DMA); P[1].palID=7;
-			}else if(P[1].palID==7){ PAL_setPalette(PAL2, spr_gillius_pal8.palette->data, DMA); P[1].palID=8;
-			}else if(P[1].palID==8){ PAL_setPalette(PAL2, spr_gillius_pal1.palette->data, DMA); P[1].palID=1;
+			if(      P[P1].palID==1){ PAL_setPalette(PAL2, spr_gillius_pal2.palette->data, DMA); P[P1].palID=2; 
+			}else if(P[P1].palID==2){ PAL_setPalette(PAL2, spr_gillius_pal3.palette->data, DMA); P[P1].palID=3;
+			}else if(P[P1].palID==3){ PAL_setPalette(PAL2, spr_gillius_pal4.palette->data, DMA); P[P1].palID=4;
+			}else if(P[P1].palID==4){ PAL_setPalette(PAL2, spr_gillius_pal5.palette->data, DMA); P[P1].palID=5;
+			}else if(P[P1].palID==5){ PAL_setPalette(PAL2, spr_gillius_pal6.palette->data, DMA); P[P1].palID=6;
+			}else if(P[P1].palID==6){ PAL_setPalette(PAL2, spr_gillius_pal7.palette->data, DMA); P[P1].palID=7;
+			}else if(P[P1].palID==7){ PAL_setPalette(PAL2, spr_gillius_pal8.palette->data, DMA); P[P1].palID=8;
+			}else if(P[P1].palID==8){ PAL_setPalette(PAL2, spr_gillius_pal1.palette->data, DMA); P[P1].palID=1;
 			}
 			*/
 		}
 		
 	}
-	if(P[2].key_JOY_MODE_status==1)
+	if(P[P2].key_JOY_MODE_status==1)
 	{
-		if( (P[1].id==P[2].id) && P[2].palID==P[1].palID-1){ P[2].palID++; } //evita paleta repetida in game
+		if( (P[P1].id==P[P2].id) && P[P2].palID==P[P1].palID-1){ P[P2].palID++; } //evita paleta repetida in game
 		
-		if(P[2].id==1) //haohmaru
+		if(P[P2].id==1) //haohmaru
 		{
 			/*
-			if(      P[2].palID==1){ PAL_setPalette(PAL3, spr_haohmaru_pal2_1a.palette->data, DMA); P[2].palID=2; 
-			}else if(P[2].palID==2){ PAL_setPalette(PAL3, spr_haohmaru_pal3_1a.palette->data, DMA); P[2].palID=3; 
-			}else if(P[2].palID==3){ PAL_setPalette(PAL3, spr_haohmaru_pal4_1a.palette->data, DMA); P[2].palID=4; 
-			}else if(P[2].palID==4){ PAL_setPalette(PAL3, spr_haohmaru_pal5_1a.palette->data, DMA); P[2].palID=5; 
-			}else if(P[2].palID==5){ PAL_setPalette(PAL3, spr_haohmaru_pal6_1a.palette->data, DMA); P[2].palID=6; 
-			}else if(P[2].palID==6){ PAL_setPalette(PAL3, spr_haohmaru_pal7_1a.palette->data, DMA); P[2].palID=7; 
-			}else if(P[2].palID==7){ PAL_setPalette(PAL3, spr_haohmaru_pal8_1a.palette->data, DMA); P[2].palID=8; 
-			}else if(P[2].palID==8){ PAL_setPalette(PAL3, spr_haohmaru_pal1_1a.palette->data, DMA); P[2].palID=1; 
+			if(      P[P2].palID==1){ PAL_setPalette(PAL3, spr_haohmaru_pal2_1a.palette->data, DMA); P[P2].palID=2; 
+			}else if(P[P2].palID==2){ PAL_setPalette(PAL3, spr_haohmaru_pal3_1a.palette->data, DMA); P[P2].palID=3; 
+			}else if(P[P2].palID==3){ PAL_setPalette(PAL3, spr_haohmaru_pal4_1a.palette->data, DMA); P[P2].palID=4; 
+			}else if(P[P2].palID==4){ PAL_setPalette(PAL3, spr_haohmaru_pal5_1a.palette->data, DMA); P[P2].palID=5; 
+			}else if(P[P2].palID==5){ PAL_setPalette(PAL3, spr_haohmaru_pal6_1a.palette->data, DMA); P[P2].palID=6; 
+			}else if(P[P2].palID==6){ PAL_setPalette(PAL3, spr_haohmaru_pal7_1a.palette->data, DMA); P[P2].palID=7; 
+			}else if(P[P2].palID==7){ PAL_setPalette(PAL3, spr_haohmaru_pal8_1a.palette->data, DMA); P[P2].palID=8; 
+			}else if(P[P2].palID==8){ PAL_setPalette(PAL3, spr_haohmaru_pal1_1a.palette->data, DMA); P[P2].palID=1; 
 			}
 			*/
 		}
-		if(P[2].id==2) //gillius
+		if(P[P2].id==2) //gillius
 		{
 			/*
-			if(      P[2].palID==1){ PAL_setPalette(PAL3, spr_gillius_pal2.palette->data, DMA); P[2].palID=2; 
-			}else if(P[2].palID==2){ PAL_setPalette(PAL3, spr_gillius_pal3.palette->data, DMA); P[2].palID=3;
-			}else if(P[2].palID==3){ PAL_setPalette(PAL3, spr_gillius_pal4.palette->data, DMA); P[2].palID=4;
-			}else if(P[2].palID==4){ PAL_setPalette(PAL3, spr_gillius_pal5.palette->data, DMA); P[2].palID=5;
-			}else if(P[2].palID==5){ PAL_setPalette(PAL3, spr_gillius_pal6.palette->data, DMA); P[2].palID=6;
-			}else if(P[2].palID==6){ PAL_setPalette(PAL3, spr_gillius_pal7.palette->data, DMA); P[2].palID=7;
-			}else if(P[2].palID==7){ PAL_setPalette(PAL3, spr_gillius_pal8.palette->data, DMA); P[2].palID=8;
-			}else if(P[2].palID==8){ PAL_setPalette(PAL3, spr_gillius_pal1.palette->data, DMA); P[2].palID=1;
+			if(      P[P2].palID==1){ PAL_setPalette(PAL3, spr_gillius_pal2.palette->data, DMA); P[P2].palID=2; 
+			}else if(P[P2].palID==2){ PAL_setPalette(PAL3, spr_gillius_pal3.palette->data, DMA); P[P2].palID=3;
+			}else if(P[P2].palID==3){ PAL_setPalette(PAL3, spr_gillius_pal4.palette->data, DMA); P[P2].palID=4;
+			}else if(P[P2].palID==4){ PAL_setPalette(PAL3, spr_gillius_pal5.palette->data, DMA); P[P2].palID=5;
+			}else if(P[P2].palID==5){ PAL_setPalette(PAL3, spr_gillius_pal6.palette->data, DMA); P[P2].palID=6;
+			}else if(P[P2].palID==6){ PAL_setPalette(PAL3, spr_gillius_pal7.palette->data, DMA); P[P2].palID=7;
+			}else if(P[P2].palID==7){ PAL_setPalette(PAL3, spr_gillius_pal8.palette->data, DMA); P[P2].palID=8;
+			}else if(P[P2].palID==8){ PAL_setPalette(PAL3, spr_gillius_pal1.palette->data, DMA); P[P2].palID=1;
 			}
 			*/
 		}
@@ -2742,20 +2599,25 @@ void FUNCAO_INPUT_SYSTEM()
 
 void FUNCAO_FSM_DEFENSE(u8 player, u8 enemy){
 
+	// Proteção contra índices inválidos
+	if(player >= NUM_PLAYERS || enemy >= NUM_PLAYERS){
+        return;
+	}
+
 	//O calculo abaixo eh usado para defender magias :)
 	u8 distancia_Player_X_Magia = 250;
-	if(P[enemy].fball.active)
+	if(FBall[enemy].active)
 	{
 		if(P[player].direcao == 1){
-			distancia_Player_X_Magia = P[enemy].fball.x - P[player].x + 25;
+			distancia_Player_X_Magia = FBall[enemy].x - P[player].x + 25;
 		}
 		if(P[player].direcao ==-1){
-			distancia_Player_X_Magia = P[player].x - P[enemy].fball.x;
+			distancia_Player_X_Magia = P[player].x - FBall[enemy].x;
 		}
 	}
 	
 	//defesa start - EM PE e ABAIXADO!
-	if ((P[enemy].stateMoveType == 1 || (P[enemy].fball.active == TRUE && distancia_Player_X_Magia <= 200)) && 
+	if ((P[enemy].stateMoveType == 1 || (FBall[enemy].active == TRUE && distancia_Player_X_Magia <= 200)) && 
 	  (((P[player].direcao ==  1 && P[player].key_JOY_LEFT_status  == 2) ||
 		(P[player].direcao == -1 && P[player].key_JOY_RIGHT_status == 2)) &&
 		(P[player].state == 100 || P[player].state == 200 || P[player].state == 410 || P[player].state == 420)))
@@ -2800,11 +2662,7 @@ void FUNCAO_FSM_NORMAL_ATTACKS(u8 player) {
 	{
 		//golpes em pe de longe
 		if(P[player].key_JOY_X_status==1 && (P[player].state==100 || P[player].state==410 || P[player].state==420))
-		{ 
-			if((player==1 && Spark2_countDown>0) || (player==2 && Spark1_countDown>0))
-			{
-				if(P[player].state==101){ P[player].x+=4*(P[player].direcao*-1); }
-			}
+		{
 			PLAYER_STATE(player,101); 
 		}
 		if(P[player].key_JOY_Y_status==1 && (P[player].state==100 || P[player].state==481 || P[player].state==410 || P[player].state==420)){ PLAYER_STATE(player,102); }
@@ -2818,11 +2676,7 @@ void FUNCAO_FSM_NORMAL_ATTACKS(u8 player) {
 			}
 		}
 		if(P[player].key_JOY_A_status==1 && (P[player].state==100 || P[player].state==481 || P[player].state==410 || P[player].state==420))
-		{ 
-			if((player==1 && Spark2_countDown>0) || (player==2 && Spark1_countDown>0))
-			{
-				if(P[player].state==104){ P[player].x+=4*(P[player].direcao*-1); }
-			}
+		{
 			PLAYER_STATE(player,104); 
 		}
 		if(P[player].key_JOY_B_status==1 && (P[player].state==100 || P[player].state==481 || P[player].state==410 || P[player].state==420)){ PLAYER_STATE(player,105); }
@@ -2848,21 +2702,13 @@ void FUNCAO_FSM_NORMAL_ATTACKS(u8 player) {
 	
 	//golpes abaixados
 	if(P[player].key_JOY_X_status==1 && (P[player].state==200) )
-	{ 
-		if((player==1 && Spark2_countDown>0) || (player==2 && Spark1_countDown>0))
-		{
-			if(P[player].state==201){ P[player].x+=4*(P[player].direcao*-1); }
-		}
+	{
 		PLAYER_STATE(player,201); 
 	}
 	if(P[player].key_JOY_Y_status==1 && P[player].state==200){ PLAYER_STATE(player,202); }
 	if(P[player].key_JOY_Z_status==1 && P[player].state==200){ PLAYER_STATE(player,203); }
 	if(P[player].key_JOY_A_status==1 && (P[player].state==200) )
-	{ 
-		if((player==1 && Spark2_countDown>0) || (player==2 && Spark1_countDown>0))
-		{
-			if(P[player].state==204){ P[player].x+=4*(P[player].direcao*-1); }
-		}
+	{
 		PLAYER_STATE(player,204); 
 	}
 	if(P[player].key_JOY_B_status==1 && P[player].state==200){ PLAYER_STATE(player,205); }
@@ -2895,6 +2741,10 @@ void FUNCAO_FSM_NORMAL_ATTACKS(u8 player) {
 }
 
 void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player) {
+
+	 if(player >= NUM_PLAYERS){
+		return;
+	}
 
 	//MAGIAS STARTUP (FSM CHANGESTATE)!!!!!!
 	//Condicoes para que se possa soltar as magias, e posterior Acionamento delas!
@@ -2929,9 +2779,6 @@ void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player) {
 				( P[player].attackButton==1 ||  P[player].attackButton==2)
 			)
 			{
-				if(Spark1_countDown>0){ SPR_releaseSprite(Spark[1]); Spark1_countDown=0; }
-				if(Spark2_countDown>0){ SPR_releaseSprite(Spark[2]); Spark2_countDown=0; }
-
 				if(P[player].hitPause==0){
 					PLAYER_STATE(player,730);
 					magic_avaliable=0; 
@@ -2945,7 +2792,7 @@ void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player) {
 			//hadouken type
 			if // v, v>, > + P ; baixo, baixo+frente, frente + Soco
 			(
-				magic_avaliable==1 && P[player].fball.active == FALSE &&
+				magic_avaliable==1 && FBall[player].active == FALSE &&
 				(
 					//(P[player].direcao== 1 && ( P[player].joyDirTimer[2] < P[player].joyDirTimer[6] ) && (P[player].joyDirTimer[2]!=0) ) 
 					( P[player].direcao== 1 && P[player].inputArray[1]==2 && P[player].inputArray[0]==6 && P[player].joyDirTimer[6]!=0 )
@@ -2956,9 +2803,6 @@ void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player) {
 				( P[player].attackButton==1 ||  P[player].attackButton==2)
 			)
 			{
-				if(Spark1_countDown>0){ SPR_releaseSprite(Spark[1]); Spark1_countDown=0; }
-				if(Spark2_countDown>0){ SPR_releaseSprite(Spark[2]); Spark2_countDown=0; }
-
 				if(P[player].hitPause==0){
 					PLAYER_STATE(player,700);
 					magic_avaliable=0;
@@ -2984,7 +2828,7 @@ void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player) {
 				( P[player].attackButton==1 ||  P[player].attackButton==2)
 			)
 			{
-				if(P[1].hitPause==0 && P[2].hitPause==0){
+				if(P[P1].hitPause==0 && P[P2].hitPause==0){
 					PLAYER_STATE(player,710);
 					magic_avaliable=0;
 				}else{
@@ -3008,7 +2852,7 @@ void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player) {
 				( P[player].attackButton==4 ||  P[player].attackButton==5)
 			)
 			{
-				if(P[1].hitPause==0 && P[2].hitPause==0){
+				if(P[P1].hitPause==0 && P[P2].hitPause==0){
 					PLAYER_STATE(player,720);
 					magic_avaliable=0;
 				}else{
@@ -3030,60 +2874,78 @@ void FUNCAO_FSM_SPECIAL_ATTACKS(u8 player) {
 	//ryo MAGIA 701 (FIREBALL)
 	if(P[player].id==1 && P[player].state==700 && P[player].animFrame==12 && P[player].frameTimeAtual==1)
 	{
-		if(P[player].fball.active==TRUE){ 
-			if(P[player].fball.spriteFBall){ 
-				SPR_releaseSprite(P[player].fball.spriteFBall); 
-				P[player].fball.spriteFBall = NULL; 
+		if(FBall[player].active==TRUE){ 
+			if(FBall[player].sprite){ 
+				SPR_releaseSprite(FBall[player].sprite); 
+				FBall[player].sprite = NULL; 
 			} 
 		}
-		P[player].fball.active=TRUE;
-		P[player].fball.x = P[player].x+(18*P[player].direcao);
+		FBall[player].active=TRUE;
+		FBall[player].x = P[player].x+(18*P[player].direcao);
 		if(P[player].direcao==-1){
-			P[player].fball.x-=70;
+			FBall[player].x-=70;
 		}
-		P[player].fball.y = P[player].y-90;
+		FBall[player].y = P[player].y-90;
 
-		P[player].fball.dataHBox[0] = +10;
-		P[player].fball.dataHBox[1] = +5;
-		P[player].fball.dataHBox[2] = +50;
-		P[player].fball.dataHBox[3] = +40;
+		FBall[player].dataHBox[0] = +10;
+		FBall[player].dataHBox[1] = +5;
+		FBall[player].dataHBox[2] = +50;
+		FBall[player].dataHBox[3] = +40;
 
-		P[player].fball.guardFlag = 1;
+		FBall[player].guardFlag = 1;
 
-		if(player==1)
+		if(player==P1)
 		{
-			P[player].fball.spriteFBall = SPR_addSpriteExSafe(&spr_jack_701, 
-				P[player].fball.x, P[player].fball.y, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), 
+			FBall[player].sprite = SPR_addSpriteExSafe(&spr_jack_701, 
+				FBall[player].x, FBall[player].y, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), 
 				SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
-		if(player==2)
+		if(player==P2)
 		{
-			P[player].fball.spriteFBall = SPR_addSpriteExSafe(&spr_jack_701, 
-				P[player].fball.x, P[player].fball.y, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), 
+			FBall[player].sprite = SPR_addSpriteExSafe(&spr_jack_701, 
+				FBall[player].x, FBall[player].y, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), 
 				SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		
-		if(P[player].fball.spriteFBall){ 
-			SPR_setDepth(P[player].fball.spriteFBall, 1); 
+		if(FBall[player].sprite){ 
+			SPR_setDepth(FBall[player].sprite, 1);
+			if(P[player].direcao == -1){ 
+				SPR_setHFlip(FBall[player].sprite, TRUE); 
+			}
 		}
-		if(P[player].direcao == -1){ 
-			SPR_setHFlip(P[player].fball.spriteFBall, TRUE); 
-		}
-		P[player].fball.direcao = P[player].direcao;
+		FBall[player].direcao = P[player].direcao;
 	}
 }
 
 void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 
+	// Proteção contra índices inválidos
+    if(player >= NUM_PLAYERS || enemy >= NUM_PLAYERS)
+    {
+        return;
+    }
+
 	/////////////
 	// Colisao //
 	/////////////
-	
-	if( FUNCAO_COLISAO(
-		P[player].x+P[player].dataHBox[0], P[player].y+P[player].dataHBox[1], P[player].x+P[player].dataHBox[2], P[player].y+P[player].dataHBox[3], 
-		P[enemy].x+P[enemy].dataBBox[0], P[enemy].y+P[enemy].dataBBox[1], P[enemy].x+P[enemy].dataBBox[2], P[enemy].y+P[enemy].dataBBox[3]
-	)==1 )
+
+    s16 box1_x1 = P[player].x + P[player].dataHBox[0];
+	s16 box1_y1 = P[player].y + P[player].dataHBox[1];
+    s16 box1_x2 = P[player].x + P[player].dataHBox[2];
+    s16 box1_y2 = P[player].y + P[player].dataHBox[3];
+
+    s16 box2_x1 = P[enemy].x + P[enemy].dataBBox[0];
+    s16 box2_y1 = P[enemy].y + P[enemy].dataBBox[1];
+    s16 box2_x2 = P[enemy].x + P[enemy].dataBBox[2];
+    s16 box2_y2 = P[enemy].y + P[enemy].dataBBox[3];
+
+	if(FUNCAO_COLISAO(box1_x1, box1_y1, box1_x2, box1_y2, box2_x1, box2_y1, box2_x2, box2_y2))
 	{
+		s16 sparkX = 0;
+		s16 sparkY = 0;
+
+		FUNCAO_GET_SPARK_POSITION(box1_x1, box1_y1, box1_x2, box1_y2, box2_x1, box2_y1, box2_x2, box2_y2, &sparkX, &sparkY);
+
 		if(FUNCAO_CHECK_GUARD(P[player].guardFlag, enemy))
 		{
 			//DEFENDEU! em pe
@@ -3105,7 +2967,7 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 
 			P[enemy].stateMoveType = 2;
 			
-			u8 AlturaDoHit = P[player].y+P[player].dataHBox[3];
+			//u8 AlturaDoHit = P[player].y+P[player].dataHBox[3];
 			P[player].dataHBox[0]=0; P[player].dataHBox[1]=0; P[player].dataHBox[2]=0; P[player].dataHBox[3]=0; //desativa a hitbox
 			
 			//dano de magias, geral
@@ -3120,19 +2982,23 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 			if(P[player].state==780){ FUNCAO_UPDATE_LIFESP(enemy,1,-2); }
 			if(P[player].state==790){ FUNCAO_UPDATE_LIFESP(enemy,1,-2); }
 			
-			if(Spark1_countDown>0){ SPR_releaseSprite(Spark[1]); }
-			if(Spark2_countDown>0){ SPR_releaseSprite(Spark[2]); }
+			if(Spark[enemy].sprite){ SPR_releaseSprite(Spark[enemy].sprite); Spark[enemy].sprite = NULL; }
 			
-			if(enemy==1){Spark1_countDown=28-1;}
-			if(enemy==2){Spark2_countDown=28-1;}
-			Spark[enemy] = SPR_addSpriteExSafe( &spr_spark0, P[enemy].x-14-camPosX, AlturaDoHit-14, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+			Spark[enemy].countDown = 28-1;
+
+			Spark[enemy].x = sparkX;
+			Spark[enemy].y = sparkY;
+
+			Spark[enemy].sprite = SPR_addSpriteExSafe(&spr_spark0, Spark[enemy].x-camPosX, Spark[enemy].y, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 			
-			if(P[enemy].direcao == -1){ SPR_setHFlip(Spark[enemy], TRUE); }
-			SPR_setDepth(Spark[enemy], 1);
+			if(Spark[enemy].sprite){
+				if(P[enemy].direcao == -1){ SPR_setHFlip(Spark[enemy].sprite, TRUE); }
+				SPR_setDepth(Spark[enemy].sprite, 1);
+			}
 			
 		}else{
 			//NAO DEFENDEU!
-			u8 AlturaDoHit = P[player].y+P[player].dataHBox[3];
+			//u8 AlturaDoHit = P[player].y+P[player].dataHBox[3];
 			P[player].dataHBox[0]=0; P[player].dataHBox[1]=0; P[player].dataHBox[2]=0; P[player].dataHBox[3]=0; //desativa a hitbox
 			
 			//Agarrao
@@ -3248,36 +3114,37 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 				{
 					//P[enemy].hitPause=16+customHitPause; //hitpause Shake
 					
-					if(Spark1_countDown>0){ if(Spark[1]){ SPR_releaseSprite(Spark[1]); Spark[1] = NULL; } }
-					if(Spark2_countDown>0){ if(Spark[2]){ SPR_releaseSprite(Spark[2]); Spark[2] = NULL; } }
+					if(Spark[enemy].sprite){ SPR_releaseSprite(Spark[enemy].sprite); Spark[enemy].sprite = NULL; }
+
+					Spark[enemy].x = sparkX;
+					Spark[enemy].y = sparkY -16;
 					
 					if(SparkType== 1)
 					{ 
-						if(enemy==1){Spark1_countDown=28-1;}
-						if(enemy==2){Spark2_countDown=28-1;}
-						Spark[enemy] = SPR_addSprite(&spr_spark1, P[enemy].x-16-camPosX, AlturaDoHit-16, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
+						Spark[enemy].countDown = 28-1;
+						Spark[enemy].sprite = SPR_addSprite(&spr_spark1, Spark[enemy].x-camPosX, Spark[enemy].y, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
 						//SPR_setVRAMTileIndex(Spark[PR], 1519); //define uma posicao especifica para o GFX na VRAM
 					}
 					//SPR_addSpriteExSafe( &spr_spark1, P[PR].x-16, AlturaDoHit-32, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
 					if(SparkType== 2)
 					{ 
-						if(enemy==1){Spark1_countDown=28-1;}
-						if(enemy==2){Spark2_countDown=28-1;}
-						Spark[enemy] = SPR_addSprite(&spr_spark2, P[enemy].x-24-camPosX, AlturaDoHit-24, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
+						Spark[enemy].countDown = 28-1;
+						Spark[enemy].sprite = SPR_addSprite(&spr_spark2, Spark[enemy].x-camPosX, Spark[enemy].y, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
 						//SPR_setVRAMTileIndex(Spark[PR], 1519); //define uma posicao especifica para o GFX na VRAM
 					}
 					//SPR_addSpriteExSafe( &spr_spark2, P[PR].x-16, AlturaDoHit-32, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
 					if(SparkType== 3)
-					{ 
-						if(enemy==1){Spark1_countDown=44-1;}
-						if(enemy==2){Spark2_countDown=44-1;}
-						Spark[enemy] = SPR_addSprite(&spr_spark3, P[enemy].x-52-camPosX, AlturaDoHit-90, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
+					{
+						Spark[enemy].countDown = 44-1;
+						Spark[enemy].sprite = SPR_addSprite(&spr_spark3, Spark[enemy].x-camPosX, Spark[enemy].y, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
 						//SPR_setVRAMTileIndex(Spark[PR], 1519); //define uma posicao especifica para o GFX na VRAM
 					}
 					//SPR_addSpriteExSafe( &spr_spark3, P[PR].x-16, AlturaDoHit-32, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
 					
-					if(P[enemy].direcao == 1){ if(Spark[enemy]){ SPR_setHFlip(Spark[enemy], TRUE); }}
-					if(Spark[enemy]){ SPR_setDepth(Spark[enemy], 1); }
+					if(Spark[enemy].sprite){
+						if(P[enemy].direcao == 1){ SPR_setHFlip(Spark[enemy].sprite, TRUE); }
+						SPR_setDepth(Spark[enemy].sprite, 1);
+					}
 				}
 			}
 		}
@@ -3286,12 +3153,24 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 	/////////////////////////
 	// COLISAO DE HITBOXES //
 	/////////////////////////
-	
-	if( FUNCAO_COLISAO(
-			P[player].x+P[player].dataHBox[0], P[player].y+P[player].dataHBox[1], P[player].x+P[player].dataHBox[2], P[player].y+P[player].dataHBox[3], 
-			P[enemy].x+P[enemy].dataHBox[0], P[enemy].y+P[enemy].dataHBox[1], P[enemy].x+P[enemy].dataHBox[2], P[enemy].y+P[enemy].dataHBox[3]
-		)==1 )
+
+	box1_x1 = P[player].x + P[player].dataHBox[0];
+	box1_y1 = P[player].y + P[player].dataHBox[1];
+    box1_x2 = P[player].x + P[player].dataHBox[2];
+    box1_y2 = P[player].y + P[player].dataHBox[3];
+
+    box2_x1 = P[enemy].x + P[enemy].dataHBox[0];
+    box2_y1 = P[enemy].y + P[enemy].dataHBox[1];
+    box2_x2 = P[enemy].x + P[enemy].dataHBox[2];
+    box2_y2 = P[enemy].y + P[enemy].dataHBox[3];
+
+	if(FUNCAO_COLISAO(box1_x1, box1_y1, box1_x2, box1_y2, box2_x1, box2_y1, box2_x2, box2_y2))
 	{
+		s16 sparkX = 0;
+		s16 sparkY = 0;
+
+		FUNCAO_GET_SPARK_POSITION(box1_x1, box1_y1, box1_x2, box1_y2, box2_x1, box2_y1, box2_x2, box2_y2, &sparkX, &sparkY);
+	
 		if(P[player].dataBBox[0]==0 && P[player].dataBBox[1]==0 && P[player].dataBBox[2]==0 && P[player].dataBBox[3]==0)
 		{
 			//nao faz nada, esta invencivel. ex shoryuken
@@ -3321,8 +3200,9 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 			
 			if(doubleHitStep==2)
 			{
-				FUNCAO_UPDATE_LIFESP(1,1,-2); 
-				FUNCAO_UPDATE_LIFESP(2,1,-2); 
+				FUNCAO_UPDATE_LIFESP(P1,1,-2);
+				FUNCAO_UPDATE_LIFESP(P2,1,-2);
+
 				if(P[player].state>=100 && P[player].state<=199){ PLAYER_STATE(player, 501); }
 				if(P[player].state>=200 && P[player].state<=299){ PLAYER_STATE(player, 511); }
 				if(P[player].state>=300 && P[player].state<=399){ PLAYER_STATE(player, 550); }
@@ -3333,27 +3213,34 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 			}
 			
 		}
-		if(player==2 && doubleHitStep==2)
+
+		if(player==P2 && doubleHitStep==2)
 		{
-			u8 AlturaDoHit = P[player].y+P[player].dataHBox[3];
+			//u8 AlturaDoHit = P[player].y+P[player].dataHBox[3];
 			
-			if(Spark1_countDown>0){ if(Spark[1]){ SPR_releaseSprite(Spark[1]); Spark[1] = NULL; } }
-			if(Spark2_countDown>0){ if(Spark[2]){ SPR_releaseSprite(Spark[2]); Spark[2] = NULL; } }
+			if(Spark[P1].sprite){ SPR_releaseSprite(Spark[P1].sprite); Spark[P1].sprite = NULL; }
+			if(Spark[P2].sprite){ SPR_releaseSprite(Spark[P2].sprite); Spark[P2].sprite = NULL; }
 			
-			Spark1_countDown=28-1;
-			Spark2_countDown=28-1;
+			Spark[P1].countDown = 28-1;
+			Spark[P2].countDown = 28-1;
+
+			Spark[P1].x = sparkX;
+			Spark[P1].y = sparkY;
+
+			Spark[P2].x = sparkX;
+			Spark[P2].y = sparkY;
 			
-			Spark[1] = SPR_addSprite(&spr_spark1, P[1].x-16-camPosX, AlturaDoHit-16, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
-			Spark[2] = SPR_addSprite(&spr_spark1, P[2].x-16-camPosX, AlturaDoHit-16, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
+			Spark[P1].sprite = SPR_addSprite(&spr_spark1, Spark[P1].x-camPosX, Spark[P1].y, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
+			Spark[P2].sprite = SPR_addSprite(&spr_spark1, Spark[P2].x-camPosX, Spark[P2].y, TILE_ATTR(PAL1, FALSE, FALSE, FALSE)); 
 			
-			SPR_setVRAMTileIndex(Spark[1], 1519); //define uma posicao especifica para o GFX na VRAM
-			SPR_setVRAMTileIndex(Spark[2], 1519); //define uma posicao especifica para o GFX na VRAM
+			//SPR_setVRAMTileIndex(Spark[P1].sprite, 1519); //define uma posicao especifica para o GFX na VRAM
+			//SPR_setVRAMTileIndex(Spark[P2].sprite, 1519); //define uma posicao especifica para o GFX na VRAM
 			
-			if(Spark[1]){ SPR_setDepth(Spark[1], 1); }
-			if(Spark[2]){ SPR_setDepth(Spark[2], 1); }
+			if(Spark[P1].sprite){ SPR_setDepth(Spark[P1].sprite, 1); }
+			if(Spark[P2].sprite){ SPR_setDepth(Spark[P2].sprite, 1); }
 			
-			P[1].dataHBox[0]=0; P[1].dataHBox[1]=0; P[1].dataHBox[2]=0; P[1].dataHBox[3]=0;
-			P[2].dataHBox[0]=0; P[2].dataHBox[1]=0; P[2].dataHBox[2]=0; P[2].dataHBox[3]=0;
+			P[P1].dataHBox[0]=0; P[P1].dataHBox[1]=0; P[P1].dataHBox[2]=0; P[P1].dataHBox[3]=0;
+			P[P2].dataHBox[0]=0; P[P2].dataHBox[1]=0; P[P2].dataHBox[2]=0; P[P2].dataHBox[3]=0;
 			
 			//XGM_setPCM(P1_SFX, snd_501, sizeof(snd_501)); XGM_startPlayPCM(P1_SFX, 1, SOUND_PCM_CH3);
 			
@@ -3367,13 +3254,25 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 	////////////////////
 	// CORPO x MAGIAS //
 	//////////////////// -=≡ΣO)) x PLAYER
-	
-	if( P[player].fball.active && FUNCAO_COLISAO(
-			P[player].fball.x + P[player].fball.dataHBox[0], P[player].fball.y + P[player].fball.dataHBox[1], P[player].fball.x + P[player].fball.dataHBox[2], P[player].fball.y + P[player].fball.dataHBox[3],
-			P[enemy].x+P[enemy].dataBBox[0], P[enemy].y+P[enemy].dataBBox[1], P[enemy].x+P[enemy].dataBBox[2], P[enemy].y+P[enemy].dataBBox[3]
-		)==1)
+
+	box1_x1 = FBall[player].x + FBall[player].dataHBox[0];
+	box1_y1 = FBall[player].y + FBall[player].dataHBox[1];
+    box1_x2 = FBall[player].x + FBall[player].dataHBox[2];
+    box1_y2 = FBall[player].y + FBall[player].dataHBox[3];
+
+    box2_x1 = P[enemy].x + P[enemy].dataBBox[0];
+    box2_y1 = P[enemy].y + P[enemy].dataBBox[1];
+    box2_x2 = P[enemy].x + P[enemy].dataBBox[2];
+    box2_y2 = P[enemy].y + P[enemy].dataBBox[3];
+
+	if(FUNCAO_COLISAO(box1_x1, box1_y1, box1_x2, box1_y2, box2_x1, box2_y1, box2_x2, box2_y2))
 	{
-		if(FUNCAO_CHECK_GUARD(P[player].fball.guardFlag, enemy))
+		s16 sparkX = 0;
+		s16 sparkY = 0;
+
+		FUNCAO_GET_SPARK_POSITION(box1_x1, box1_y1, box1_x2, box1_y2, box2_x1, box2_y1, box2_x2, box2_y2, &sparkX, &sparkY);
+
+		if(FUNCAO_CHECK_GUARD(FBall[player].guardFlag, enemy))
 		{
 			//DEFENDEU! em pe
 			if(P[enemy].state>=107 && P[enemy].state<=109){
@@ -3400,7 +3299,8 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 				P[enemy].hitPause=16;
 			}else{
 				P[enemy].hitPause=20;
-			} 
+			}
+
 			FUNCAO_UPDATE_LIFESP(enemy,1,-8); 
 			FUNCAO_UPDATE_LIFESP(enemy,2, 11);
 			
@@ -3419,127 +3319,141 @@ void FUNCAO_FSM_COLLISION(u8 player, u8 enemy) {
 		}
 		
 		//desativa a magia ja que colidiu
-		if(P[player].fball.active==1)
+		if(FBall[player].active==1)
 		{ 
-			if(P[player].fball.spriteFBall)
+			if(FBall[player].sprite)
 			{ 
-				SPR_releaseSprite(P[player].fball.spriteFBall); 
-				P[player].fball.spriteFBall = NULL; 
+				SPR_releaseSprite(FBall[player].sprite); 
+				FBall[player].sprite = NULL; 
 			} 
-			P[player].fball.active=0;
+			FBall[player].active=0;
 		}			
 		
 		//SPARK DE MAGIA SUMINDO
-		if(Spark1_countDown>0){ SPR_releaseSprite(Spark[1]); }
-		if(Spark2_countDown>0){ SPR_releaseSprite(Spark[2]); }
-		if(player==1){Spark1_countDown=20;}
-		if(player==2){Spark2_countDown=20;}
+		if(Spark[player].sprite){ SPR_releaseSprite(Spark[player].sprite); Spark[player].sprite = NULL; }
 		
-		if(player==1)//p1
+		Spark[player].countDown = 20;
+
+		Spark[player].x = sparkX;
+		Spark[player].y = FBall[player].y;
+
+		//ryo
+		if(P[player].direcao == 1)
 		{
-			//ryo
-			if(P[player].direcao == 1)
-			{
-				if(P[player].id==1){ Spark[player] = SPR_addSpriteExSafe( &spr_jack_702, P[enemy].x-80-camPosX, P[player].fball.y, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
-			}else{
-				if(P[player].id==1){ Spark[player] = SPR_addSpriteExSafe( &spr_jack_702, P[enemy].x-camPosX, P[player].fball.y, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
-			}
-			
+			if(P[player].id==1){ Spark[player].sprite = SPR_addSpriteExSafe( &spr_jack_702, Spark[player].x-camPosX, Spark[player].y, TILE_ATTR(P[player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
+		}else{
+			if(P[player].id==1){ Spark[player].sprite = SPR_addSpriteExSafe( &spr_jack_702, Spark[player].x-camPosX, Spark[player].y, TILE_ATTR(P[player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
 		}
-		if(player==2)//p2
-		{
-			//ryo
-			if(P[player].direcao == 1)
-			{
-				if(P[player].id==1){ Spark[player] = SPR_addSpriteExSafe( &spr_jack_702, P[enemy].x-80-camPosX, P[player].fball.y, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC |SPR_FLAG_AUTO_TILE_UPLOAD); }
-			}else{
-				if(P[player].id==1){ Spark[player] = SPR_addSpriteExSafe( &spr_jack_702, P[enemy].x-camPosX, P[player].fball.y, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
-			}
-			
-		}
+
 		
 		//se o spark foi carregado com sucesso...
-		if (Spark[player])
-		{ 
-			if(P[player].direcao == -1){ SPR_setHFlip(Spark[player], TRUE); }
-			SPR_setDepth(Spark[player], 1); 
+		if(Spark[player].sprite)
+		{
+			if(P[player].direcao == -1){ SPR_setHFlip(Spark[player].sprite, TRUE); }
+			SPR_setDepth(Spark[player].sprite, 1); 
 		}
 		
 		//reseta posicao da magia
-		P[player].fball.x=-250;
-		P[player].fball.y=-250; 
+		FBall[player].x=-250;
+		FBall[player].y=-250; 
 	}
 	
 	/////////////////////
 	// MAGIAS x MAGIAS //
 	///////////////////// -=≡ΣO)) x ((O3≡=-
-	
-	if( (P[player].fball.active && P[enemy].fball.active) && FUNCAO_COLISAO(
-			P[player].fball.x + P[player].fball.dataHBox[0], P[player].fball.y + P[player].fball.dataHBox[1], P[player].fball.x + P[player].fball.dataHBox[2], P[player].fball.y + P[player].fball.dataHBox[3],
-			P[enemy].fball.x + P[enemy].fball.dataHBox[0], P[enemy].fball.y + P[enemy].fball.dataHBox[1], P[enemy].fball.x + P[enemy].fball.dataHBox[2], P[enemy].fball.y + P[enemy].fball.dataHBox[3]
-		)==1
-		&& ( (P[player].fball.x!=0 && P[player].fball.y!=0) && (P[player].fball.x!=-250 && P[player].fball.y!=-250) ) )
+
+	box1_x1 = FBall[player].x + FBall[player].dataHBox[0];
+	box1_y1 = FBall[player].y + FBall[player].dataHBox[1];
+    box1_x2 = FBall[player].x + FBall[player].dataHBox[2];
+    box1_y2 = FBall[player].y + FBall[player].dataHBox[3];
+
+    box2_x1 = FBall[enemy].x + FBall[enemy].dataHBox[0];
+    box2_y1 = FBall[enemy].y + FBall[enemy].dataHBox[1];
+    box2_x2 = FBall[enemy].x + FBall[enemy].dataHBox[2];
+    box2_y2 = FBall[enemy].y + FBall[enemy].dataHBox[3];
+
+	if(FUNCAO_COLISAO(box1_x1, box1_y1, box1_x2, box1_y2, box2_x1, box2_y1, box2_x2, box2_y2))
 	{
+	
 		//desativa a magia
-		if(P[player].fball.active==1)
+		if(FBall[player].active==1)
 		{ 
-			if(P[player].fball.spriteFBall)
+			if(FBall[player].sprite)
 			{ 
-				SPR_releaseSprite(P[player].fball.spriteFBall); 
-				P[player].fball.spriteFBall = NULL; 
+				SPR_releaseSprite(FBall[player].sprite); 
+				FBall[player].sprite = NULL; 
 			} 
-			P[player].fball.active=0;
+			FBall[player].active=0;
 		}			
-		if(P[enemy].fball.active==1)
+		if(FBall[enemy].active==1)
 		{ 
-			if(P[enemy].fball.spriteFBall)
+			if(FBall[enemy].sprite)
 			{ 
-				SPR_releaseSprite(P[enemy].fball.spriteFBall); 
-				P[enemy].fball.spriteFBall = NULL; 
+				SPR_releaseSprite(FBall[enemy].sprite); 
+				FBall[enemy].sprite = NULL; 
 			} 
-			P[enemy].fball.active=0;
+			FBall[enemy].active=0;
 		}	
 		
 		//SPARK DE MAGIA SUMINDO
-		if(Spark1_countDown>0){ SPR_releaseSprite(Spark[1]); }
-		if(Spark2_countDown>0){ SPR_releaseSprite(Spark[2]); }
-		if(player==1){Spark1_countDown=20;}
-		if(player==2){Spark2_countDown=20;}
+		if(Spark[player].sprite){ SPR_releaseSprite(Spark[player].sprite); Spark[player].sprite = NULL; }
+		if(Spark[enemy].sprite){ SPR_releaseSprite(Spark[enemy].sprite); Spark[enemy].sprite = NULL; }
+
+		Spark[player].countDown = 20;
+		Spark[enemy].countDown = 20;
+
+		Spark[player].x = FBall[player].x;
+		Spark[player].y = FBall[player].y;
+
+		Spark[enemy].x = FBall[enemy].x;
+		Spark[enemy].y = FBall[enemy].y;
+
+		//Carragar aqui o sprite da magia sumindo
 		
+		if(P[player].id==1){ Spark[player].sprite = SPR_addSpriteExSafe( &spr_jack_702, Spark[player].x-camPosX, Spark[player].y, TILE_ATTR(P[player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
+		
+		if(P[enemy].id==1){ Spark[enemy].sprite = SPR_addSpriteExSafe( &spr_jack_702, Spark[enemy].x-camPosX, Spark[enemy].y, TILE_ATTR(P[enemy].paleta, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD); }
+		
+
 		//se o spark foi carregado com sucesso...
-		if (Spark[player])
-		{ 
-			if(P[player].direcao == -1){ SPR_setHFlip(Spark[player], TRUE); }
-			SPR_setDepth(Spark[player], 1); 
+		if(Spark[player].sprite)
+		{
+			if(P[player].direcao == -1){ SPR_setHFlip(Spark[player].sprite, TRUE); }
+			SPR_setDepth(Spark[player].sprite, 1); 
 		}
-		if (Spark[enemy])
-		{ 
-			if(P[enemy].direcao == -1){ SPR_setHFlip(Spark[enemy], TRUE); }
-			SPR_setDepth(Spark[enemy], 1); 
+		if(Spark[enemy].sprite)
+		{
+			if(P[enemy].direcao == -1){ SPR_setHFlip(Spark[enemy].sprite, TRUE); }
+			SPR_setDepth(Spark[enemy].sprite, 1); 
 		}
 		
 		//reseta posicao da magia
-		P[player].fball.x=-250;
-		P[player].fball.y=-250; 
-		P[enemy].fball.x=-250;
-		P[enemy].fball.y=-250;
+		FBall[player].x=-250;
+		FBall[player].y=-250;
+
+		FBall[enemy].x=-250;
+		FBall[enemy].y=-250;
 	}
 }
 
 void FUNCAO_FSM()
 {
 	
-	if(P[1].direcao==1){
-		gDistancia = P[2].x - P[1].x;
+	if(P[P1].direcao==1){
+		gDistancia = P[P2].x - P[P1].x;
 	}else{
-		gDistancia = P[1].x - P[2].x;
+		gDistancia = P[P1].x - P[P2].x;
 	}
 
-	for(i=1; i<=2; i++)
+	for(u8 i = P1; i < NUM_PLAYERS; i++)
 	{
-		u8 PA; //Player Attack (Player que ataca)
-		u8 PR; //Player Receive (Player que recebe o dano)
-		if(i==1){ PA=1; PR=2; }else{ PA=2; PR=1; }
+		u8 PA = P1; //Player Attack (Player que ataca)
+		u8 PR = P2; //Player Receive (Player que recebe o dano)
+		if(i==P1){ PA=P1; PR=P2; }else{ PA=P2; PR=P1; }
+
+		//Essa verificacao deve ficar nessa ordem: especiais antes de normais
+		FUNCAO_FSM_SPECIAL_ATTACKS(PA); //Verificando os ataques especiais
+		FUNCAO_FSM_NORMAL_ATTACKS(PA); //Verifica os ataques normais
 		
 		//hpig 1.1 bugfix - virar enquanto anda
 		if((P[PA].state==410 || P[PA].state==420) && P[PA].direcao== 1 && (P[PA].x>P[PR].x)){ PLAYER_STATE(i,100); }
@@ -3646,44 +3560,24 @@ void FUNCAO_FSM()
 		}
 		
 		//time over decision; timeover
-		if((gClockLTimer==0 && gClockRTimer==0) && P[1].state!=611 && P[1].state!=615)
+		if((gClockLTimer==0 && gClockRTimer==0) && P[P1].state!=611 && P[P1].state!=615)
 		{
 			bool updateWinsFlag=0;
-			if(P[1].energiaBase> P[2].energiaBase){ PLAYER_STATE(1,611); P[1].wins++; updateWinsFlag=1; PLAYER_STATE(2,615); }
-			if(P[1].energiaBase< P[2].energiaBase){ PLAYER_STATE(2,611); P[2].wins++; updateWinsFlag=2; PLAYER_STATE(1,615); }
-			if(P[1].energiaBase==P[2].energiaBase){ PLAYER_STATE(1,615); PLAYER_STATE(2,615); }
+			if(P[P1].energiaBase> P[P2].energiaBase){ PLAYER_STATE(P1,611); P[P1].wins++; updateWinsFlag=P1; PLAYER_STATE(P2,615); }
+			if(P[P1].energiaBase< P[P2].energiaBase){ PLAYER_STATE(P2,611); P[P2].wins++; updateWinsFlag=P2; PLAYER_STATE(P1,615); }
+			if(P[P1].energiaBase==P[P2].energiaBase){ PLAYER_STATE(P1,615); PLAYER_STATE(P2,615); }
 			if(updateWinsFlag!=0){
-				if(updateWinsFlag==1) //P1
+				if(updateWinsFlag==P1) //P1
 				{
-					//if(P[1].wins>=1){ SPR_setVisibility(GE[12].sprite, VISIBLE); }
-					//if(P[1].wins>=2){ SPR_setVisibility(GE[13].sprite, VISIBLE); }
+					//if(P[P1].wins>=1){ SPR_setVisibility(GE[12].sprite, VISIBLE); }
+					//if(P[P1].wins>=2){ SPR_setVisibility(GE[13].sprite, VISIBLE); }
 				}
-				if(updateWinsFlag==2) //P2
+				if(updateWinsFlag==P2) //P2
 				{
-					//if(P[2].wins>=1){ SPR_setVisibility(GE[15].sprite, VISIBLE); }
-					//if(P[2].wins>=2){ SPR_setVisibility(GE[14].sprite, VISIBLE); }
+					//if(P[P2].wins>=1){ SPR_setVisibility(GE[15].sprite, VISIBLE); }
+					//if(P[P2].wins>=2){ SPR_setVisibility(GE[14].sprite, VISIBLE); }
 				}
 			}
-		}
-		
-		//Destroi Magias!
-		if(P[i].fball.countDown>0){ P[i].fball.countDown--; }
-		if(P[i].fball.countDown==1)
-		{
-			if(P[i].fball.active==1)
-			{ 
-				if(P[i].id==1 || P[i].id==2 || P[i].id==3)//ryo & ANDY & JOE
-				{
-					if(P[i].fball.spriteFBall)
-					{ 
-						SPR_releaseSprite(P[i].fball.spriteFBall); 
-						P[i].fball.spriteFBall = NULL; 
-						P[i].fball.x=-250;
-						P[i].fball.y=-250; 
-					} 
-					P[i].fball.active=0;
-				}
-			}		
 		}
 		
 		
@@ -3693,7 +3587,7 @@ void FUNCAO_FSM()
 		 ((P[i].direcao== 1 && (P[i].key_JOY_RIGHT_status==1 || P[i].key_JOY_RIGHT_status==2)) ||
 	      (P[i].direcao==-1 && (P[i].key_JOY_LEFT_status ==1 || P[i].key_JOY_LEFT_status ==2))) &&
 		  (P[i].state==100 || P[i].state==410 || P[i].state==420))
-		{ 
+		{
 			PLAYER_STATE(i,800); //Inicio do agarrao
 		}
 
@@ -3702,27 +3596,8 @@ void FUNCAO_FSM()
 		}
 		//------------------------------------------------------
 
-
 		FUNCAO_FSM_DEFENSE(PA, PR); //Verifica o estado de defesa
-		FUNCAO_FSM_NORMAL_ATTACKS(PA); //Verifica os ataques normais
-		FUNCAO_FSM_SPECIAL_ATTACKS(PA); //Verificando os ataques especiais
 		FUNCAO_FSM_COLLISION(PA, PR); //Verificando colisoes
-
-		
-		//Rage Explosion! Rage timer!
-		/*
-		if( 
-		P[i].rageTimerCountdown==RAGETIMER && P[i].energiaSP>=32 
-		&& (P[i].state==100 || P[i].state==200 || P[i].state==410 || P[i].state==420) 
-		&& gPodeMover==1
-		)
-		{
-			P[i].rageTimerCountdown--;
-			PLAYER_STATE(i,618);
-		}
-		if(P[i].energiaSP>=32 && P[i].rageTimerCountdown<RAGETIMER && P[i].energiaBase>0 && gFrames>350){ if(P[i].rageTimerCountdown>0){ P[i].rageTimerCountdown--; } }
-		if(P[i].rageTimerCountdown==0 && (P[i].state==100 || P[i].state==200)){ P[i].rageTimerCountdown=RAGETIMER; P[i].energiaSP=0; }
-		*/
 		
 		//Vitoria
 		if(
@@ -3740,12 +3615,12 @@ void FUNCAO_FSM()
 			if(gPing10==0              ){ PLAYER_STATE(PA,612); P[PA].wins++; } //Vc pode carregar uma pose diferente aqui, eu estou usando 3!
 			
 			//Exibe o contador de Wins correspondente
-			if(PA==1) //P1
+			if(PA==P1) //P1
 			{
 				if(P[PA].wins>=1){ SPR_setVisibility(GE[12].sprite, VISIBLE); }
 				if(P[PA].wins>=2){ SPR_setVisibility(GE[13].sprite, VISIBLE); }
 			}
-			if(PA==2) //P2
+			if(PA==P2) //P2
 			{
 				if(P[PA].wins>=1){ SPR_setVisibility(GE[15].sprite, VISIBLE); }
 				if(P[PA].wins>=2){ SPR_setVisibility(GE[14].sprite, VISIBLE); }
@@ -4128,8 +4003,8 @@ void FUNCAO_FSM_HITBOXES(u8 Player)
 	
 	if(P[Player].state==606){ P[Player].dataBBox[0]=-20; P[Player].dataBBox[1]=- 90; P[Player].dataBBox[2]= 15; P[Player].dataBBox[3]=  0; }
 	
-	if(Player==1 && (P[2].state==110 || P[2].state==210)){ reset_HBox=1; }
-	if(Player==2 && (P[1].state==110 || P[1].state==210)){ reset_HBox=1; }
+	if(Player==P1 && (P[P2].state==110 || P[P2].state==210)){ reset_HBox=1; }
+	if(Player==P2 && (P[P1].state==110 || P[P1].state==210)){ reset_HBox=1; }
 	
 	//resets
 	if(reset_HBox==1){ P[Player].dataHBox[0]=0; P[Player].dataHBox[1]=0; P[Player].dataHBox[2]=0; P[Player].dataHBox[3]=0; } //Hit Boxes
@@ -4139,7 +4014,7 @@ void FUNCAO_FSM_HITBOXES(u8 Player)
 
 void FUNCAO_PHYSICS() //FISICA!
 {
-	for(i=1; i<=2; i++)
+	for(u8 i = P1; i < NUM_PLAYERS; i++)
 	{
 		/*KOF94*/
 		//-----------------------------------------------------------------------------------------
@@ -4155,8 +4030,8 @@ void FUNCAO_PHYSICS() //FISICA!
 			//velocidade da magia - Hadouken Type
 			if(P[i].state==700 && P[i].animFrame==5)
 			{
-				if(P[i].attackPower==1){ P[i].fball.speedX = 2; }
-				if(P[i].attackPower==2){ P[i].fball.speedX = 4; }
+				if(P[i].attackPower==1){ FBall[i].speedX = 2; }
+				if(P[i].attackPower==2){ FBall[i].speedX = 4; }
 			}
 			
 			//710
@@ -4226,7 +4101,7 @@ void FUNCAO_PHYSICS() //FISICA!
 			//730 - Roris Type
 			if(P[i].state==730 && P[i].hitPause==0) 
 			{
-				if (i == 1) { //P1
+				if (i == P1) { //P1
 					//Y
 					if (P[i].animFrame >= 4) {
 						if (P[i].animFrame == 4 && P[i].setup) {
@@ -4255,7 +4130,7 @@ void FUNCAO_PHYSICS() //FISICA!
 					}
 				}
 
-				if (i == 2) { //P2
+				if (i == P2) { //P2
 					//Y
 					if(P[i].animFrame < 5){
 						if(P[i].animFrame==4){ P[i].y-=4; }
@@ -4287,9 +4162,9 @@ void FUNCAO_PHYSICS() //FISICA!
 		//Hits Movement, deslocamento dos Players para tras, durante os ataques
 		if(P[i].state>=500 && P[i].state<=550 && P[i].hitPause==0)
 		{
-			u8 PA=0; //Player que Ataca
-			u8 PR=0; //Player que Recebe o Ataque
-			if(i == 1){ PA = 2; PR = 1; }else{ PA = 1; PR = 2; }
+			u8 PA = P1; //Player que Ataca
+			u8 PR = P2; //Player que Recebe o Ataque
+			if(i == P1){ PA = P2; PR = P1; }else{ PA = P1; PR = P2; }
 			
 			//Nota, sem as condicoes abaixo, o deslocamento sera continuo, enquanto durar a animacao de Hit
 			//Esse algoritimo simples simula a desaceleracao, ou friccao, causada pelo atrito com o solo
@@ -4377,9 +4252,9 @@ void FUNCAO_PHYSICS() //FISICA!
 			if(P[i].state==110){P[i].x+=P[i].hSpeed*(P[i].direcao*-1);}//defesa em pe
 			if(P[i].state==210){P[i].x+=P[i].hSpeed*(P[i].direcao*-1);}//defesa abaixado
 			
-			u8 PA=0; //Player que Ataca
-			u8 PR=0; //Player que Recebe o Ataque
-			if(i == 1){ PA = 2; PR = 1; }else{ PA = 1; PR = 2; }
+			u8 PA = P1; //Player que Ataca
+			u8 PR = P2; //Player que Recebe o Ataque
+			if(i == P1){ PA = P2; PR = P1; }else{ PA = P1; PR = P2; }
 			
 			//Limites laterais
 			if(P[PR].x >= gBG_Width-30 && P[PR].stateMoveType == 2)
@@ -4411,7 +4286,7 @@ void FUNCAO_PHYSICS() //FISICA!
 		{
 			if(P[i].puloTimer!=0){ P[i].puloTimer++; }
 
-			if (i == 1) { //P1
+			if (i == P1) { //P1
 				if (P[i].state >= 300 && P[i].state <= 326) {
 
 					if (P[i].puloTimer == 2) {
@@ -4443,7 +4318,7 @@ void FUNCAO_PHYSICS() //FISICA!
 				}
 			}
 
-			if (i == 2) { //P2
+			if (i == P2) { //P2
 				if(P[i].state>=300 && P[i].state<=326)
 				{ 
 					P[i].hSpeed=3;
@@ -4667,19 +4542,19 @@ void FUNCAO_PHYSICS() //FISICA!
 		//-----------------------------------------------------------------------------------------
 		
 		//Movimento das Magias
-		if(P[i].fball.active == 1)
+		if(FBall[i].active == 1)
 		{
-			P[i].fball.x += P[i].fball.speedX * P[i].fball.direcao;
-			SPR_setPosition( P[i].fball.spriteFBall, P[i].fball.x-camPosX, P[i].fball.y );
-			//if(P[i].fBallX<gLimiteCenarioE-100){ SPR_releaseSprite(P[i].fBall); P[i].fBallActive=0; P[i].fBallX=-255; P[i].fBallY=-255; }
-			//if(P[i].fBallX>gLimiteCenarioD+100){ SPR_releaseSprite(P[i].fBall); P[i].fBallActive=0; P[i].fBallX=-255; P[i].fBallY=-255; }
+			FBall[i].x += FBall[i].speedX * FBall[i].direcao;
+			SPR_setPosition( FBall[i].sprite, FBall[i].x-camPosX, FBall[i].y );
+			//if(FBall[i]X<gLimiteCenarioE-100){ SPR_releaseSprite(FBall[i]); FBall[i]Active=0; FBall[i]X=-255; FBall[i]Y=-255; }
+			//if(FBall[i]X>gLimiteCenarioD+100){ SPR_releaseSprite(FBall[i]); FBall[i]Active=0; FBall[i]X=-255; FBall[i]Y=-255; }
 
-			if((P[i].fball.x < camPosX-60) || (P[i].fball.x > camPosX+320-20)) {
-				SPR_releaseSprite(P[i].fball.spriteFBall); 
-				P[i].fball.spriteFBall = NULL; 
-				P[i].fball.active=0; 
-				P[i].fball.x=-255; 
-				P[i].fball.y=-255; 
+			if((FBall[i].x < camPosX-60) || (FBall[i].x > camPosX+320-20)) {
+				SPR_releaseSprite(FBall[i].sprite); 
+				FBall[i].sprite = NULL; 
+				FBall[i].active=0; 
+				FBall[i].x=-255; 
+				FBall[i].y=-255; 
 			}
 		}
 
@@ -4695,21 +4570,21 @@ void FUNCAO_PHYSICS() //FISICA!
 		}
 
 		//Colisao Mass Boxes
-		if(P[1].state!=472 && P[2].state!=472)
+		if(P[P1].state!=472 && P[P2].state!=472)
 		{
 			if(FUNCAO_COLISAO(
-				P[1].x+P[1].dataMBox[0], P[1].y+P[1].dataMBox[1], P[1].x+P[1].dataMBox[2], P[1].y+P[1].dataMBox[3], 
-				P[2].x+P[2].dataMBox[0], P[2].y+P[2].dataMBox[1], P[2].x+P[2].dataMBox[2], P[2].y+P[2].dataMBox[3]
+				P[P1].x+P[P1].dataMBox[0], P[P1].y+P[P1].dataMBox[1], P[P1].x+P[P1].dataMBox[2], P[P1].y+P[P1].dataMBox[3], 
+				P[P2].x+P[P2].dataMBox[0], P[P2].y+P[P2].dataMBox[1], P[P2].x+P[P2].dataMBox[2], P[P2].y+P[P2].dataMBox[3]
 			)){
 
-				if (P[1].y < gAlturaPiso || P[2].y < gAlturaPiso) { //Um dos lutadores esta no ar
+				if (P[P1].y < gAlturaPiso || P[P2].y < gAlturaPiso) { //Um dos lutadores esta no ar
 
-					u8 PAir = 0; //Player que esta no ar
-					u8 PGround = 0; //Player que esta no chao
-					if(P[1].y < gAlturaPiso){
-						PAir = 1; PGround = 2;
+					u8 PAir = P1; //Player que esta no ar
+					u8 PGround = P2; //Player que esta no chao
+					if(P[P1].y < gAlturaPiso){
+						PAir = P1; PGround = P2;
 					}else{
-						PAir = 2; PGround = 1;
+						PAir = P2; PGround = P1;
 					}
 
 					if (P[PAir].x <= P[PGround].x) {
@@ -4721,21 +4596,21 @@ void FUNCAO_PHYSICS() //FISICA!
 				} else { //Os dois lutadoes estao no chao
 					u8 tempBigHSpeed=0;
 
-					if(P[1].hSpeed >= P[2].hSpeed){
-						tempBigHSpeed = P[1].hSpeed;
+					if(P[P1].hSpeed >= P[P2].hSpeed){
+						tempBigHSpeed = P[P1].hSpeed;
 					}else{
-						tempBigHSpeed = P[2].hSpeed;
+						tempBigHSpeed = P[P2].hSpeed;
 					}
 					if(tempBigHSpeed == 0){
 						tempBigHSpeed = 5;
 					}
 
-					if(P[1].x < P[2].x){
-						P[1].x -= tempBigHSpeed;
-						P[2].x += tempBigHSpeed;
+					if(P[P1].x < P[P2].x){
+						P[P1].x -= tempBigHSpeed;
+						P[P2].x += tempBigHSpeed;
 					}else{
-						P[1].x += tempBigHSpeed;
-						P[2].x -= tempBigHSpeed;
+						P[P1].x += tempBigHSpeed;
+						P[P2].x -= tempBigHSpeed;
 					}
 				}
 			}
@@ -4757,24 +4632,24 @@ void FUNCAO_PHYSICS() //FISICA!
 			}
 		}
 
-		if (P[1].x <= P[2].x) {
-			gDistancia = P[2].x-P[1].x;
+		if (P[P1].x <= P[P2].x) {
+			gDistancia = P[P2].x-P[P1].x;
 		} else {
-			gDistancia = P[1].x-P[2].x;
+			gDistancia = P[P1].x-P[P2].x;
 		}
 		
 		if (gDistancia > 260) { //Verifica a distancia maxima entre os lutadores
-			if (P[1].x < P[2].x) {
-				if (i == 1) {
-					P[1].x += gDistancia - 260;
-				} else if (i == 2) {
-					P[2].x -= gDistancia - 260;
+			if (P[P1].x < P[P2].x) {
+				if (i == P1) {
+					P[P1].x += gDistancia - 260;
+				} else {
+					P[P2].x -= gDistancia - 260;
 				}
 			} else {
-				if (i == 1) {
-					P[1].x -= gDistancia - 260;
-				} else if (i == 2) {
-					P[2].x += gDistancia - 260;
+				if (i == P1) {
+					P[P1].x -= gDistancia - 260;
+				} else {
+					P[P2].x += gDistancia - 260;
 				}
 			}
 		}
@@ -4803,15 +4678,15 @@ bool FUNCAO_CHECK_GUARD(u8 guardFlag, u8 enemy)
 	return retorno;
 }
 
-void FUNCAO_CAMERA_BGANIM()
+void FUNCAO_CAMERA()
 {
 	//---------------------------------------------------------------------------------------------new cam ini
 	//Metodo novo, hamoopig 1.1
 	//Calcula o meio da tela, para centralizar a camera
-	if (P[1].x > P[2].x) {
-		gMeioDaTela = (P[2].x + ((P[1].x - P[2].x)/2)) - (320 / 2);
+	if (P[P1].x > P[P2].x) {
+		gMeioDaTela = (P[P2].x + ((P[P1].x - P[P2].x)/2)) - (320 / 2);
 	} else {
-		gMeioDaTela = (P[1].x + ((P[2].x - P[1].x)/2)) - (320 / 2);
+		gMeioDaTela = (P[P1].x + ((P[P2].x - P[P1].x)/2)) - (320 / 2);
 	}
 
 	//Posiciona a camera
@@ -4850,45 +4725,9 @@ void FUNCAO_DEPTH(u8 Player)
 	if(P[Player].sprite){ SPR_setDepth(P[Player].sprite, depth); }
 }
 
-void FUNCAO_SAMSHOFX() //ESPECIFICO DO SAMURAI SHODOWN 2
-{
-	//ESPECIFICO DE SAMURAI SHODOW. AJUSTE DA BARRA DE RAGE
-	if(P[1].energiaSP ==  0){  P[1].rageLvl=0; }
-	if(P[1].energiaSP >   0 && P[1].energiaSP<=15){ P[1].rageLvl=0; }
-	if(P[1].energiaSP >= 16 && P[1].energiaSP<=31){ P[1].rageLvl=1; }
-	if(P[1].energiaSP >= 32){  P[1].rageLvl=2; }
-	
-	if(P[2].energiaSP ==  0){  P[2].rageLvl=0; }
-	if(P[2].energiaSP >   0 && P[2].energiaSP<=15){ P[2].rageLvl=0; }
-	if(P[2].energiaSP >= 16 && P[2].energiaSP<=31){ P[2].rageLvl=1; }
-	if(P[2].energiaSP >= 32){  P[2].rageLvl=2; }
-	
-	//ESPECIFICO DO SAMURAI SHODOW. ESPADA PISCANDO E SOMBRA
-	/*
-	if(gSombraStyle==1)
-	{
-		if(gPing2==0)
-		{ 
-			//P1
-			if(gSombraStyle==2){ SPR_setVisibility(P[1].sombra, VISIBLE); }
-			//P2
-			if(gSombraStyle==2){ SPR_setVisibility(P[2].sombra, HIDDEN); }
-		}
-		if(gPing2==1)
-		{ 
-			//P1
-			if(gSombraStyle==2){ SPR_setVisibility(P[1].sombra, HIDDEN); }
-			//P2
-			if(gSombraStyle==2){ SPR_setVisibility(P[2].sombra, VISIBLE); }
-		}
-	}
-	*/
-	
-}
-
 void FUNCAO_CHECK_FRAME_ADVANTAGE() {
-	if ((P[1].control == TRUE  && P[2].control == TRUE  && frameAdvCounterP1 != 0) ||
-	    (P[1].control == FALSE && P[2].control == FALSE && frameAdvCounterP1 != 0)) {
+	if ((P[P1].control == TRUE  && P[P2].control == TRUE  && frameAdvCounterP1 != 0) ||
+	    (P[P1].control == FALSE && P[P2].control == FALSE && frameAdvCounterP1 != 0)) {
 		
 		//P!
 		lastFrameAdvCounterP1 = frameAdvCounterP1;
@@ -4900,11 +4739,11 @@ void FUNCAO_CHECK_FRAME_ADVANTAGE() {
 
 	} else {
 
-		if (P[1].control && !P[2].control) {
+		if (P[P1].control && !P[P2].control) {
 			frameAdvCounterP1++;
 			frameAdvCounterP2--;
 			
-		} else if (!P[1].control && P[2].control) {
+		} else if (!P[P1].control && P[P2].control) {
 			frameAdvCounterP1--;
 			frameAdvCounterP2++;
 			
@@ -4920,26 +4759,26 @@ void FUNCAO_DEBUG()
 	
 	//Debug em texto, desativado:
 	//VDP_drawText("HAMOOPIG ENGINE", 1, 1);
-	//sprintf(gStr, "P1-> %i,%i S:%i T:%i/%i F:%i/%i    ", P[1].x, P[1].y, P[1].state, P[1].frameTimeAtual, P[1].frameTimeTotal, P[1].animFrame, P[1].animFrameTotal ); 
-	//sprintf(gStr, "P1-> S:%i T:%i/%i F:%i/%i    ", P[1].state, P[1].frameTimeAtual, P[1].frameTimeTotal, P[1].animFrame, P[1].animFrameTotal ); 
+	//sprintf(gStr, "P1-> %i,%i S:%i T:%i/%i F:%i/%i    ", P[P1].x, P[P1].y, P[P1].state, P[P1].frameTimeAtual, P[P1].frameTimeTotal, P[P1].animFrame, P[P1].animFrameTotal ); 
+	//sprintf(gStr, "P1-> S:%i T:%i/%i F:%i/%i    ", P[P1].state, P[P1].frameTimeAtual, P[P1].frameTimeTotal, P[P1].animFrame, P[P1].animFrameTotal ); 
 	//VDP_drawText(gStr, 1, 2);
-	//sprintf(gStr, "P2-> S:%i T:%i/%i F:%i/%i    ", P[2].state, P[2].frameTimeAtual, P[2].frameTimeTotal, P[2].animFrame, P[2].animFrameTotal ); 
+	//sprintf(gStr, "P2-> S:%i T:%i/%i F:%i/%i    ", P[P2].state, P[P2].frameTimeAtual, P[P2].frameTimeTotal, P[P2].animFrame, P[P2].animFrameTotal ); 
 	//VDP_drawText(gStr, 1, 3);
-	//sprintf(gStr, "UP:%i DOWN:%i LEFT:%i RIGHT:%i ATK_B:%i  ", P[1].joyDirTimer[8], P[1].joyDirTimer[2], P[1].joyDirTimer[4], P[1].joyDirTimer[6], P[1].attackButton ); 
+	//sprintf(gStr, "UP:%i DOWN:%i LEFT:%i RIGHT:%i ATK_B:%i  ", P[P1].joyDirTimer[8], P[P1].joyDirTimer[2], P[P1].joyDirTimer[4], P[P1].joyDirTimer[6], P[P1].attackButton ); 
 	
 
 	u8 dist = 0;
-	if (P[1].x > P[2].x) {
-		dist = P[1].x - P[2].x;
+	if (P[P1].x > P[P2].x) {
+		dist = P[P1].x - P[P2].x;
 	} else {
-		dist = P[2].x - P[1].x;
+		dist = P[P2].x - P[P1].x;
 	}
 
-	KLog_U2("P1 state: ", P[1].state, ", P2 state: ", P[2].state);
-	KLog_U2("P1 x: ", P[1].x, ", P2 x: ", P[2].x);
-	KLog_U2("P1 y: ", P[1].y, ", P2 y: ", P[2].y);
+	KLog_U2("P1 state: ", P[P1].state, ", P2 state: ", P[P2].state);
+	KLog_U2("P1 x: ", P[P1].x, ", P2 x: ", P[P2].x);
+	KLog_U2("P1 y: ", P[P1].y, ", P2 y: ", P[P2].y);
 	KLog_U1("Distancia entre P1 e P2: ", dist);
-	KLog_U2("P1 hits: ", P[1].hitCounter, ", P2 hits: ", P[2].hitCounter);
+	KLog_U2("P1 hits: ", P[P1].hitCounter, ", P2 hits: ", P[P2].hitCounter);
 
 	FUNCAO_CHECK_FRAME_ADVANTAGE();
 	KLog_S2("P1 frame adv: ", lastFrameAdvCounterP1, ", P2 frame adv: ", lastFrameAdvCounterP2);
@@ -4948,65 +4787,65 @@ void FUNCAO_DEBUG()
 
 	if(RELEASE==0)
 	{
-		SPR_setPosition(GE[1].sprite, P[1].x-4-camPosX, P[1].y-5);
-		SPR_setPosition(GE[2].sprite, P[2].x-4-camPosX, P[2].y-5);
+		SPR_setPosition(GE[P1].sprite, P[P1].x-4-camPosX, P[P1].y-5);
+		SPR_setPosition(GE[P2].sprite, P[P2].x-4-camPosX, P[P2].y-5);
 	}
 	
 	if(RELEASE==0)
 	{
 		//P1
 		//bodyboxes
-		if(P[1].dataBBox[0]==0 && P[1].dataBBox[2]==0){
+		if(P[P1].dataBBox[0]==0 && P[P1].dataBBox[2]==0){
 			SPR_setPosition(Rect1BB1_Q1,-8,-8); SPR_setPosition(Rect1BB1_Q2,-8,-8); SPR_setPosition(Rect1BB1_Q3,-8,-8); SPR_setPosition(Rect1BB1_Q4,-8,-8);
 		}else{
-			SPR_setPosition(Rect1BB1_Q1, P[1].x+P[1].dataBBox[0]  -camPosX, P[1].y+P[1].dataBBox[1]);
-			SPR_setPosition(Rect1BB1_Q2, P[1].x+P[1].dataBBox[2]-8-camPosX, P[1].y+P[1].dataBBox[1]);
-			SPR_setPosition(Rect1BB1_Q3, P[1].x+P[1].dataBBox[0]  -camPosX, P[1].y+P[1].dataBBox[3]-8);
-			SPR_setPosition(Rect1BB1_Q4, P[1].x+P[1].dataBBox[2]-8-camPosX, P[1].y+P[1].dataBBox[3]-8);
+			SPR_setPosition(Rect1BB1_Q1, P[P1].x+P[P1].dataBBox[0]  -camPosX, P[P1].y+P[P1].dataBBox[1]);
+			SPR_setPosition(Rect1BB1_Q2, P[P1].x+P[P1].dataBBox[2]-8-camPosX, P[P1].y+P[P1].dataBBox[1]);
+			SPR_setPosition(Rect1BB1_Q3, P[P1].x+P[P1].dataBBox[0]  -camPosX, P[P1].y+P[P1].dataBBox[3]-8);
+			SPR_setPosition(Rect1BB1_Q4, P[P1].x+P[P1].dataBBox[2]-8-camPosX, P[P1].y+P[P1].dataBBox[3]-8);
 		}
 		//hitboxes
-		if(P[1].dataHBox[0]==0 && P[1].dataHBox[2]==0){
+		if(P[P1].dataHBox[0]==0 && P[P1].dataHBox[2]==0){
 			SPR_setPosition(Rect1HB1_Q1,-8,-8); SPR_setPosition(Rect1HB1_Q2,-8,-8); SPR_setPosition(Rect1HB1_Q3,-8,-8); SPR_setPosition(Rect1HB1_Q4,-8,-8);
 		}else{
-			SPR_setPosition(Rect1HB1_Q1, P[1].x+P[1].dataHBox[0]  -camPosX, P[1].y+P[1].dataHBox[1]);
-			SPR_setPosition(Rect1HB1_Q2, P[1].x+P[1].dataHBox[2]-8-camPosX, P[1].y+P[1].dataHBox[1]);
-			SPR_setPosition(Rect1HB1_Q3, P[1].x+P[1].dataHBox[0]  -camPosX, P[1].y+P[1].dataHBox[3]-8);
-			SPR_setPosition(Rect1HB1_Q4, P[1].x+P[1].dataHBox[2]-8-camPosX, P[1].y+P[1].dataHBox[3]-8);
+			SPR_setPosition(Rect1HB1_Q1, P[P1].x+P[P1].dataHBox[0]  -camPosX, P[P1].y+P[P1].dataHBox[1]);
+			SPR_setPosition(Rect1HB1_Q2, P[P1].x+P[P1].dataHBox[2]-8-camPosX, P[P1].y+P[P1].dataHBox[1]);
+			SPR_setPosition(Rect1HB1_Q3, P[P1].x+P[P1].dataHBox[0]  -camPosX, P[P1].y+P[P1].dataHBox[3]-8);
+			SPR_setPosition(Rect1HB1_Q4, P[P1].x+P[P1].dataHBox[2]-8-camPosX, P[P1].y+P[P1].dataHBox[3]-8);
 		}
 
 		//P2
 		//bodyboxes
-		if(P[2].dataBBox[0]==0 && P[2].dataBBox[2]==0){
+		if(P[P2].dataBBox[0]==0 && P[P2].dataBBox[2]==0){
 			SPR_setPosition(Rect2BB1_Q1,-8,-8); SPR_setPosition(Rect2BB1_Q2,-8,-8); SPR_setPosition(Rect2BB1_Q3,-8,-8); SPR_setPosition(Rect2BB1_Q4,-8,-8);
 		}else{
-			SPR_setPosition(Rect2BB1_Q1, P[2].x+P[2].dataBBox[0]  -camPosX, P[2].y+P[2].dataBBox[1]);
-			SPR_setPosition(Rect2BB1_Q2, P[2].x+P[2].dataBBox[2]-8-camPosX, P[2].y+P[2].dataBBox[1]);
-			SPR_setPosition(Rect2BB1_Q3, P[2].x+P[2].dataBBox[0]  -camPosX, P[2].y+P[2].dataBBox[3]-8);
-			SPR_setPosition(Rect2BB1_Q4, P[2].x+P[2].dataBBox[2]-8-camPosX, P[2].y+P[2].dataBBox[3]-8);
+			SPR_setPosition(Rect2BB1_Q1, P[P2].x+P[P2].dataBBox[0]  -camPosX, P[P2].y+P[P2].dataBBox[1]);
+			SPR_setPosition(Rect2BB1_Q2, P[P2].x+P[P2].dataBBox[2]-8-camPosX, P[P2].y+P[P2].dataBBox[1]);
+			SPR_setPosition(Rect2BB1_Q3, P[P2].x+P[P2].dataBBox[0]  -camPosX, P[P2].y+P[P2].dataBBox[3]-8);
+			SPR_setPosition(Rect2BB1_Q4, P[P2].x+P[P2].dataBBox[2]-8-camPosX, P[P2].y+P[P2].dataBBox[3]-8);
 		}
 		//hitboxes
-		if(P[2].dataHBox[0]==0 && P[2].dataHBox[2]==0){
+		if(P[P2].dataHBox[0]==0 && P[P2].dataHBox[2]==0){
 			SPR_setPosition(Rect2HB1_Q1,-8,-8); SPR_setPosition(Rect2HB1_Q2,-8,-8); SPR_setPosition(Rect2HB1_Q3,-8,-8); SPR_setPosition(Rect2HB1_Q4,-8,-8);
 		}else{
-			SPR_setPosition(Rect2HB1_Q1, P[2].x+P[2].dataHBox[0]  -camPosX, P[2].y+P[2].dataHBox[1]);
-			SPR_setPosition(Rect2HB1_Q2, P[2].x+P[2].dataHBox[2]-8-camPosX, P[2].y+P[2].dataHBox[1]);
-			SPR_setPosition(Rect2HB1_Q3, P[2].x+P[2].dataHBox[0]  -camPosX, P[2].y+P[2].dataHBox[3]-8);
-			SPR_setPosition(Rect2HB1_Q4, P[2].x+P[2].dataHBox[2]-8-camPosX, P[2].y+P[2].dataHBox[3]-8);
+			SPR_setPosition(Rect2HB1_Q1, P[P2].x+P[P2].dataHBox[0]  -camPosX, P[P2].y+P[P2].dataHBox[1]);
+			SPR_setPosition(Rect2HB1_Q2, P[P2].x+P[P2].dataHBox[2]-8-camPosX, P[P2].y+P[P2].dataHBox[1]);
+			SPR_setPosition(Rect2HB1_Q3, P[P2].x+P[P2].dataHBox[0]  -camPosX, P[P2].y+P[P2].dataHBox[3]-8);
+			SPR_setPosition(Rect2HB1_Q4, P[P2].x+P[P2].dataHBox[2]-8-camPosX, P[P2].y+P[P2].dataHBox[3]-8);
 		}
 
 		//hitboxes das magias para o P1
-		if (P[1].fball.active == 1) {
-			SPR_setPosition(Rect1HB1_Q1, P[1].fball.x + P[1].fball.dataHBox[0]   -camPosX, P[1].fball.y + P[1].fball.dataHBox[1]);
-			SPR_setPosition(Rect1HB1_Q2, P[1].fball.x + P[1].fball.dataHBox[2] -8-camPosX, P[1].fball.y + P[1].fball.dataHBox[1]);
-			SPR_setPosition(Rect1HB1_Q3, P[1].fball.x + P[1].fball.dataHBox[0]   -camPosX, P[1].fball.y + P[1].fball.dataHBox[3] -8);
-			SPR_setPosition(Rect1HB1_Q4, P[1].fball.x + P[1].fball.dataHBox[2] -8-camPosX, P[1].fball.y + P[1].fball.dataHBox[3] -8);
+		if (FBall[P1].active == 1) {
+			SPR_setPosition(Rect1HB1_Q1, FBall[P1].x + FBall[P1].dataHBox[0]   -camPosX, FBall[P1].y + FBall[P1].dataHBox[1]);
+			SPR_setPosition(Rect1HB1_Q2, FBall[P1].x + FBall[P1].dataHBox[2] -8-camPosX, FBall[P1].y + FBall[P1].dataHBox[1]);
+			SPR_setPosition(Rect1HB1_Q3, FBall[P1].x + FBall[P1].dataHBox[0]   -camPosX, FBall[P1].y + FBall[P1].dataHBox[3] -8);
+			SPR_setPosition(Rect1HB1_Q4, FBall[P1].x + FBall[P1].dataHBox[2] -8-camPosX, FBall[P1].y + FBall[P1].dataHBox[3] -8);
 		}
 		//hitboxes das magias para o P2
-		if (P[2].fball.active == 1) {
-			SPR_setPosition(Rect1HB1_Q1, P[2].fball.x + P[2].fball.dataHBox[0]   -camPosX, P[2].fball.y + P[2].fball.dataHBox[1]);
-			SPR_setPosition(Rect1HB1_Q2, P[2].fball.x + P[2].fball.dataHBox[2] -8-camPosX, P[2].fball.y + P[2].fball.dataHBox[1]);
-			SPR_setPosition(Rect1HB1_Q3, P[2].fball.x + P[2].fball.dataHBox[0]   -camPosX, P[2].fball.y + P[2].fball.dataHBox[3] -8);
-			SPR_setPosition(Rect1HB1_Q4, P[2].fball.x + P[2].fball.dataHBox[2] -8-camPosX, P[2].fball.y + P[2].fball.dataHBox[3] -8);
+		if (FBall[P2].active == 1) {
+			SPR_setPosition(Rect1HB1_Q1, FBall[P2].x + FBall[P2].dataHBox[0]   -camPosX, FBall[P2].y + FBall[P2].dataHBox[1]);
+			SPR_setPosition(Rect1HB1_Q2, FBall[P2].x + FBall[P2].dataHBox[2] -8-camPosX, FBall[P2].y + FBall[P2].dataHBox[1]);
+			SPR_setPosition(Rect1HB1_Q3, FBall[P2].x + FBall[P2].dataHBox[0]   -camPosX, FBall[P2].y + FBall[P2].dataHBox[3] -8);
+			SPR_setPosition(Rect1HB1_Q4, FBall[P2].x + FBall[P2].dataHBox[2] -8-camPosX, FBall[P2].y + FBall[P2].dataHBox[3] -8);
 		}
 		
 		//metodo de display HBoxes Info, (piscando) = reduz os tiles simultaneos em tela (DESATIVADO)
@@ -5040,37 +4879,46 @@ void FUNCAO_DEBUG()
 
 bool FUNCAO_COLISAO(s16 R1x1, s16 R1y1, s16 R1x2, s16 R1y2, s16 R2x1, s16 R2y1, s16 R2x2, s16 R2y2)
 {
-	
 	s16 temp=0;
 	if(R1x1>R1x2){ temp=R1x1; R1x1=R1x2; R1x2=temp; }
 	if(R2x1>R2x2){ temp=R2x1; R2x1=R2x2; R2x2=temp; }
 	
 	if ( (R1x1+(R1x2-R1x1)>R2x1) && (R1x1<R2x1+(R2x2-R2x1)) && 
 		 (R1y1+(R1y2-R1y1)>R2y1) && (R1y1<R2y1+(R2y2-R2y1)) )
-	{ 
-		
+	{
 		if(R1x1==R1x2 && R1y1==R1y2){
-			return 0;
+			return FALSE;
 			}else if(R2x1==R2x2 && R2y1==R2y2){
-				return 0;
+				return FALSE;
 			}else{
 				/*houve colisao*/
-				return 1;
+				return TRUE;
 			}
 	}else{ 
 		/*nao houve colisao*/
-		return 0;
+		return FALSE;
 	}
 }
 
 void FUNCAO_UPDATE_LIFESP(u8 Player, u8 EnergyType, s8 Value)
 {
-	if(EnergyType==1) //energia
+	if(Player >= NUM_PLAYERS){
+        return;
+    }
+
+	if(EnergyType==1) //Energia = Vida
 	{
-		if(P[Player].energiaBase<Value*-1){ P[Player].energiaBase=0;
-		}else{ P[Player].energiaBase = P[Player].energiaBase+Value; }
+		if(P[Player].energiaBase<Value*-1){
+			P[Player].energiaBase=0;
+		}else{
+			P[Player].energiaBase = P[Player].energiaBase+Value;
+		}
 	}
-	if(P[Player].energiaBase==0){  PLAYER_STATE(Player, 550); }
+
+	if(P[Player].energiaBase==0){
+		PLAYER_STATE(Player, 550);
+	}
+
 	/*bugado
 	if(P[Player].state==110 && P[Player].state==210){
 		if(P[Player].energiaBase==0){ PLAYER_STATE(Player, 550); }
@@ -5090,6 +4938,36 @@ void FUNCAO_UPDATE_LIFESP(u8 Player, u8 EnergyType, s8 Value)
 	//temporario
 	if(P[Player].energiaBase<=20){ P[Player].energiaBase = 96; }
 
+}
+
+void FUNCAO_PLAYER_INIT(u8 player)
+{
+	P[player].energia = 96;
+	P[player].energiaBase = 96;
+	P[player].energiaSP = 0;
+	P[player].wins = 0;
+	P[player].hitPause = 0;
+	P[player].direcao = 1;
+	P[player].state = 610; //610, Intro State!
+	P[player].puloTimer = 0;
+	P[player].dataMBox[0] = -BODYSPACE;
+	P[player].dataMBox[1] = -60;
+	P[player].dataMBox[2] = +BODYSPACE;
+	P[player].dataMBox[3] = - 1;
+	P[player].cicloInteracoesGravidade = CIGD; //CIGD eh uma definicao global! ver inicio do codigo
+	P[player].cicloInteracoesGravidadeCont = 0;
+	P[player].bufferSpecial = 0;
+	P[player].hitCounter = 0;
+	P[player].stateMoveType = 0;
+
+	P[player].y = gAlturaPiso;
+	P[player].x = (gBG_Width/2)-80; //P[player].x = (320/4);
+	P[player].paleta = PAL2;
+
+	if(player == P2){
+		P[player].x = (gBG_Width/2)+80; //P[P2].x = (320/4)*3;
+		P[player].paleta = PAL3;
+	}
 }
 
 void FUNCAO_INICIALIZACAO()
@@ -5136,60 +5014,16 @@ void FUNCAO_INICIALIZACAO()
 	u8 divisoes = 22;
 	gAlturaPiso = (224/divisoes)*divisoes-1; gAlturaPiso-=4;
 	
-	for(i=1; i<=2; i++) {
+	for(u8 i = P1; i < NUM_PLAYERS; i++) {
 		P[i].key_JOY_countdown[2]=0;
 		P[i].key_JOY_countdown[4]=0;
 		P[i].key_JOY_countdown[6]=0;
 		P[i].key_JOY_countdown[8]=0;
 	}
 	
-	//P1
-	P[1].energia = 96;
-	P[1].energiaBase = 96;
-	P[1].energiaSP = 0;
-	P[1].rageTimerCountdown=RAGETIMER;
-	P[1].wins = 0;
-	P[1].x = (gBG_Width/2)-80; //P[1].x = (320/4);
-	P[1].y = gAlturaPiso;
-	P[1].hitPause = 0;
-	P[1].direcao = 1;
-	P[1].state = 610; //610, Intro State!
-	P[1].puloTimer = 0;
-	P[1].dataMBox[0] = -BODYSPACE;
-	P[1].dataMBox[1] = -60;
-	P[1].dataMBox[2] = +BODYSPACE;
-	P[1].dataMBox[3] = - 1;
-	P[1].paleta = PAL2;
-	P[1].cicloInteracoesGravidade = CIGD; //CIGD eh uma definicao global! ver inicio do codigo
-	P[1].cicloInteracoesGravidadeCont = 0;
-	P[1].fball.active = 0;
-	P[1].bufferSpecial = 0;
-	P[1].hitCounter = 0;
-	P[1].stateMoveType = 0;
-	
-	//P2
-	P[2].energia = 96;
-	P[2].energiaBase = 96;
-	P[2].energiaSP = 0;
-	P[2].rageTimerCountdown=RAGETIMER;
-	P[2].wins = 0;
-	P[2].x = (gBG_Width/2)+80; //P[2].x = (320/4)*3;
-	P[2].y = gAlturaPiso;
-	P[2].hitPause = 0;
-	P[2].direcao = -1;
-	P[2].state = 610; //610, Intro State!
-	P[2].puloTimer = 0;
-	P[2].dataMBox[0] = -BODYSPACE;
-	P[2].dataMBox[1] = -60;
-	P[2].dataMBox[2] = +BODYSPACE;
-	P[2].dataMBox[3] = - 1;
-	P[2].paleta = PAL3;
-	P[2].cicloInteracoesGravidade = CIGD; //CIGD eh uma definicao global! ver inicio do codigo
-	P[2].cicloInteracoesGravidadeCont = 0;
-	P[2].fball.active = 0;
-	P[2].bufferSpecial = 0;
-	P[2].hitCounter = 0;
-	P[2].stateMoveType = 0;
+	// Inicializa os players
+	FUNCAO_PLAYER_INIT(P1);
+	FUNCAO_PLAYER_INIT(P2);
 
 
 	//Para verificar a vantagem ou desvantagem em relacao aos frames
@@ -5199,35 +5033,13 @@ void FUNCAO_INICIALIZACAO()
 	lastFrameAdvCounterP2 = 0;
 
 	/*
-	P[1].sombra = SPR_addSpriteExSafe(&spr_sombra, P[1].x-P[1].axisX, P[1].y-2, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-	SPR_setVRAMTileIndex(P[1].sombra, 1492); //define uma posicao especifica para o GFX na VRAM
+	P[P1].sombra = SPR_addSpriteExSafe(&spr_sombra, -8, -8, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+	SPR_setVRAMTileIndex(P[P1].sombra, 1492); //define uma posicao especifica para o GFX na VRAM
 	if(gSombraStyle==2)
 	{
-		P[2].sombra = SPR_addSpriteExSafe(&spr_sombra, P[2].x-P[1].axisX, P[2].y-2, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+		P[P2].sombra = SPR_addSpriteExSafe(&spr_sombra, -8, -8, TILE_ATTR(PAL1, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 	}
 	*/
-	
-	//reset Graphic Elements
-	if (GE[ 1].sprite){ SPR_releaseSprite(GE[ 1].sprite); GE[ 1].sprite = NULL; }
-	if (GE[ 2].sprite){ SPR_releaseSprite(GE[ 2].sprite); GE[ 2].sprite = NULL; }
-	if (GE[ 3].sprite){ SPR_releaseSprite(GE[ 3].sprite); GE[ 3].sprite = NULL; }
-	if (GE[ 4].sprite){ SPR_releaseSprite(GE[ 4].sprite); GE[ 4].sprite = NULL; }
-	if (GE[ 5].sprite){ SPR_releaseSprite(GE[ 5].sprite); GE[ 5].sprite = NULL; }
-	if (GE[ 6].sprite){ SPR_releaseSprite(GE[ 6].sprite); GE[ 6].sprite = NULL; }
-	if (GE[ 7].sprite){ SPR_releaseSprite(GE[ 7].sprite); GE[ 7].sprite = NULL; }
-	if (GE[ 8].sprite){ SPR_releaseSprite(GE[ 8].sprite); GE[ 8].sprite = NULL; }
-	if (GE[ 9].sprite){ SPR_releaseSprite(GE[ 9].sprite); GE[ 9].sprite = NULL; }
-	if (GE[10].sprite){ SPR_releaseSprite(GE[10].sprite); GE[10].sprite = NULL; }
-	if (GE[11].sprite){ SPR_releaseSprite(GE[11].sprite); GE[11].sprite = NULL; }
-	if (GE[12].sprite){ SPR_releaseSprite(GE[12].sprite); GE[12].sprite = NULL; }
-	if (GE[13].sprite){ SPR_releaseSprite(GE[13].sprite); GE[13].sprite = NULL; }
-	if (GE[14].sprite){ SPR_releaseSprite(GE[14].sprite); GE[14].sprite = NULL; }
-	if (GE[15].sprite){ SPR_releaseSprite(GE[15].sprite); GE[15].sprite = NULL; }
-	if (GE[16].sprite){ SPR_releaseSprite(GE[16].sprite); GE[16].sprite = NULL; }
-	if (GE[17].sprite){ SPR_releaseSprite(GE[17].sprite); GE[17].sprite = NULL; }
-	if (GE[18].sprite){ SPR_releaseSprite(GE[18].sprite); GE[18].sprite = NULL; }
-	if (GE[19].sprite){ SPR_releaseSprite(GE[19].sprite); GE[19].sprite = NULL; }
-	if (GE[20].sprite){ SPR_releaseSprite(GE[20].sprite); GE[20].sprite = NULL; }
 	
 	gClockTimer=60; //Relogio, timer de 1 seg
 	gClockLTimer=9; //Digito esquerdo do Relogio
@@ -5303,45 +5115,54 @@ void FUNCAO_INICIALIZACAO()
 		SPR_setDepth(Rect2HB1_Q3, 1);
 		SPR_setDepth(Rect2HB1_Q4, 1);
 	}
+
+	//Definindo os personagens dos players
+	P[P1].id = 1;
+	P[P2].id = 1;
+
+	//Definindo as paletas dos personagens
+	cursorP1ColorChoice = 1;
+	cursorP2ColorChoice = 2;
 	
 	//Intro State, Player Start
-	//P[1].sprite = SPR_addSpriteExSafe(&spr_point, P[1].x-P[1].axisX, P[1].y-P[1].axisY, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-	//P[2].sprite = SPR_addSpriteExSafe(&spr_point, P[2].x-P[2].axisX, P[2].y-P[2].axisY, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-	PLAYER_STATE(1,100);
-	PLAYER_STATE(2,100);
+	//P[P1].sprite = SPR_addSpriteExSafe(&spr_point, P[P1].x-P[P1].axisX, P[P1].y-P[P1].axisY, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+	//P[P2].sprite = SPR_addSpriteExSafe(&spr_point, P[P2].x-P[P2].axisX, P[P2].y-P[P2].axisY, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+	PLAYER_STATE(P1,100);
+	PLAYER_STATE(P2,100);
 	
-	SPR_setHFlip(P[2].sprite, TRUE);
+	SPR_setHFlip(P[P2].sprite, TRUE);
 	
 	//Define a paleta dos players...
-	P[1].palID=cursorP1ColorChoice;
-	P[2].palID=cursorP2ColorChoice; 
+	P[P1].palID=cursorP1ColorChoice;
+	P[P2].palID=cursorP2ColorChoice; 
 	
-	if( P[1].id==P[2].id && P[1].palID==P[2].palID)
+	if( P[P1].id==P[P2].id && P[P1].palID==P[P2].palID)
 	{
 		//se ambos os players forem iguais e com a mesma paleta...
-		P[1].palID=1; //Por padrao, P1 fica com a paleta 1
-		P[2].palID=2; //Por padrao, P2 fica com a paleta 2 'cor alternativa'
+		P[P1].palID=1; //Por padrao, P1 fica com a paleta 1
+		P[P2].palID=2; //Por padrao, P2 fica com a paleta 2 'cor alternativa'
 	}
 	
 	//--P1--
-	
-	if(P[1].id== 1 && P[1].palID==1){ PAL_setPalette(PAL2, spr_jack_pal1.palette->data, DMA); } //ryo
-	if(P[1].id== 1 && P[1].palID==2){ PAL_setPalette(PAL2, spr_jack_pal2.palette->data, DMA); } //ryo
+	if(P[P1].id== 1 && P[P1].palID==1){ PAL_setPalette(PAL2, spr_jack_pal1.palette->data, DMA); } //ryo
+	if(P[P1].id== 1 && P[P1].palID==2){ PAL_setPalette(PAL2, spr_jack_pal2.palette->data, DMA); } //ryo
 	
 	//--P2--
-	
-	if(P[2].id== 1 && P[2].palID==1){ PAL_setPalette(PAL3, spr_jack_pal1.palette->data, DMA); } //ryo
-	if(P[2].id== 1 && P[2].palID==2){ PAL_setPalette(PAL3, spr_jack_pal2.palette->data, DMA); } //ryo
+	if(P[P2].id== 1 && P[P2].palID==1){ PAL_setPalette(PAL3, spr_jack_pal1.palette->data, DMA); } //ryo
+	if(P[P2].id== 1 && P[P2].palID==2){ PAL_setPalette(PAL3, spr_jack_pal2.palette->data, DMA); } //ryo
 	
 	//AXIS
 	if(RELEASE==0)
 	{
-		if (GE[1].sprite){ SPR_releaseSprite(GE[1].sprite); GE[1].sprite = NULL; }
-		if (GE[2].sprite){ SPR_releaseSprite(GE[2].sprite); GE[2].sprite = NULL; }
-		GE[1].sprite = SPR_addSprite(&spr_point, P[1].x-4, P[1].y-5, TILE_ATTR(PAL1, FALSE, FALSE, FALSE));
-		GE[2].sprite = SPR_addSprite(&spr_point, P[2].x-4, P[2].y-5, TILE_ATTR(PAL1, FALSE, FALSE, FALSE));
+		if(GE[1].sprite){ SPR_releaseSprite(GE[1].sprite); GE[1].sprite = NULL; }
+		if(GE[2].sprite){ SPR_releaseSprite(GE[2].sprite); GE[2].sprite = NULL; }
+
+		GE[1].sprite = SPR_addSprite(&spr_point, -8, -8, TILE_ATTR(PAL1, FALSE, FALSE, FALSE));
+		GE[2].sprite = SPR_addSprite(&spr_point, -8, -8, TILE_ATTR(PAL1, FALSE, FALSE, FALSE));
+
 		SPR_setVRAMTileIndex(GE[1].sprite, 1455); //define uma posicao especifica para o GFX na VRAM
 		SPR_setVRAMTileIndex(GE[2].sprite, 1455); //define uma posicao especifica para o GFX na VRAM
+
 		SPR_setVisibility(GE[1].sprite, HIDDEN);
 		SPR_setVisibility(GE[2].sprite, HIDDEN);
 		
@@ -5350,12 +5171,12 @@ void FUNCAO_INICIALIZACAO()
 		SPR_setDepth(GE[2].sprite, 2 );
 	}
 	
-	//depth 3 e 4 reservados
-	if (P[1].sprite){ SPR_setDepth(P[1].sprite,  5 ); } 
-	if (P[2].sprite){ SPR_setDepth(P[2].sprite,  6 ); } 
+	//Depth para os personagens
+	if(P[P1].sprite){ SPR_setDepth(P[P1].sprite, 5); } 
+	if(P[P2].sprite){ SPR_setDepth(P[P2].sprite, 6); } 
 	//depth 7 e 8 reservados
-	//if(P[1].sombra){ SPR_setDepth(P[1].sombra, 98 ); }
-	//if(gSombraStyle==2){ SPR_setDepth(P[2].sombra, 99 ); }
+	//if(P[P1].sombra){ SPR_setDepth(P[P1].sombra, 98 ); }
+	//if(gSombraStyle==2){ SPR_setDepth(P[P2].sombra, 99 ); }
 }
 
 void FUNCAO_ROUND_INIT()
@@ -5368,25 +5189,388 @@ void FUNCAO_ROUND_RESTART()
 	
 }
 
+static inline void FUNCTION_RELEASE_SPRITE_SAFE(Sprite **sprite)
+{
+	if(sprite == NULL){ return; }
+	if(*sprite != NULL){ SPR_releaseSprite(*sprite); *sprite = NULL; }
+}
+
 void CLEAR_VDP()
 {
-	SYS_disableInts();
-	 SPR_reset();
-	 //VDP_resetSprites();
-	 //VDP_releaseAllSprites();
-	 //SPR_defragVRAM();
-	 VDP_clearPlane(BG_A, TRUE);
-	 VDP_clearPlane(BG_B, TRUE);	
-	 VDP_setTextPlane(BG_A);  
-	 VDP_setHorizontalScroll(BG_B, 0); 
-	 VDP_setVerticalScroll(BG_B, 0); 
-	 VDP_setHorizontalScroll(BG_A, 0); 
-	 VDP_setVerticalScroll(BG_A, 0);
-	 VDP_setBackgroundColor(0);
-	 VDP_resetScreen();
-	 PAL_setColors(0, palette_black, 64, DMA);
+	PAL_setColors(0, palette_black, 64, DMA);
+
+	gInd_tileset = 0;
+
+	//--------------------------------------------------------------
+	// Sprites das caixas do player 1
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1BB1_Q1);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1BB1_Q2);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1BB1_Q3);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1BB1_Q4);
+
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1HB1_Q1);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1HB1_Q2);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1HB1_Q3);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect1HB1_Q4);
+
+	//--------------------------------------------------------------
+	// Sprites das caixas do player 2
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2BB1_Q1);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2BB1_Q2);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2BB1_Q3);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2BB1_Q4);
+
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2HB1_Q1);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2HB1_Q2);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2HB1_Q3);
+	FUNCTION_RELEASE_SPRITE_SAFE(&Rect2HB1_Q4);
+
+	//--------------------------------------------------------------
+	// HUD
+	FUNCTION_RELEASE_SPRITE_SAFE(&HUD_Lethers);
+
+	FUNCTION_RELEASE_SPRITE_SAFE(&ClockL);
+	FUNCTION_RELEASE_SPRITE_SAFE(&ClockR);
+
+	//--------------------------------------------------------------
+	// Sprites para elementos extras
+	for(u8 i = 0; i < GE_COUNT; i++){
+		FUNCTION_RELEASE_SPRITE_SAFE(&GE[i].sprite);
+	}
+
+	//--------------------------------------------------------------
+	// Sprites dos jogadores
+	for(u8 i = P1; i < NUM_PLAYERS; i++){
+		FUNCTION_RELEASE_SPRITE_SAFE(&P[i].sprite);
+
+		FUNCTION_RELEASE_SPRITE_SAFE(&Spark[i].sprite);
+
+		FUNCTION_RELEASE_SPRITE_SAFE(&FBall[i].sprite);
+	}
+
+
+	//--------------------------------------------------------------
+	// Reinicialização gráfica
+	SYS_disableInts(); // Protege acesso ao VDP
+
+	SPR_reset(); // Remove todos os sprites do Sprite Engine
+
+	//--------------------------------------------------------------
+	// Configuração dos planos
+	VDP_setPlaneSize(64, 32, TRUE);
+	VDP_setScrollingMode(HSCROLL_PLANE, VSCROLL_PLANE);
+	VDP_setWindowVPos(FALSE, 0);
+
+	//----------------------------------------------------------
+    // Reseta scrolling imediatamente
+    VDP_setHorizontalScroll(BG_A, 0);
+    VDP_setHorizontalScroll(BG_B, 0);
+
+    VDP_setVerticalScroll(BG_A, 0);
+    VDP_setVerticalScroll(BG_B, 0);
+
+	//--------------------------------------------------------------
+	// Limpa os tilemaps
+	VDP_clearPlane(WINDOW, TRUE);
+	VDP_clearPlane(BG_A, TRUE);
+	VDP_clearPlane(BG_B, TRUE);
+
+	//--------------------------------------------------------------
+	// Estado gráfico padrão
+	VDP_setBackgroundColor(0);
+	VDP_setHilightShadow(FALSE);
+
+	//----------------------------------------------------------
+    // Restaura interrupções
 	SYS_enableInts();
-	gInd_tileset=0;
+
+	//--------------------------------------------------------------
+}
+
+inline void FUNCAO_UTIL()
+{
+	if(gPing2  == 1){ gPing2  = -1; } gPing2++;  //var 'gPing2'  (50%) variacao: 0 ; 1
+	if(gPing4  == 3){ gPing4  = -1; } gPing4++;  //var 'gPing4'  (25%) variacao: 0 ; 1 ; 2 ; 3
+	if(gPing10 == 9){ gPing10 = -1; } gPing10++; //var 'gPing10' (10%) variacao: 0 ; 1 ; 2 ; 3 ; 4 ; 5 ; 6 ; 7 ; 8 ; 9
+}
+
+void ROOM_DESCOMPRESSION()
+{
+	kprintf("Room Drescompression");
+
+	gFrames = 0;
+
+	while(gRoom==R_DESCOMPRESSION)
+	{
+		gFrames++;
+
+		if(gFrames<30)
+		{
+			// Libera os sprites
+			if(GE[1].sprite){ SPR_releaseSprite(GE[1].sprite); GE[1].sprite = NULL; }
+			if(GE[2].sprite){ SPR_releaseSprite(GE[2].sprite); GE[2].sprite = NULL; }
+			if(GE[3].sprite){ SPR_releaseSprite(GE[3].sprite); GE[3].sprite = NULL; }
+
+			// Carrega os sprites
+			GE[1].sprite = SPR_addSpriteExSafe(&spr_point,  0, 225, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+			GE[2].sprite = SPR_addSpriteExSafe(&spr_point,  0, 225, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+			GE[3].sprite = SPR_addSpriteExSafe(&spr_point,  0, 225, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+		}
+		
+		if(gFrames>=30)
+		{
+			// Libera os sprites
+			if(GE[1].sprite){ SPR_releaseSprite(GE[1].sprite); GE[1].sprite = NULL; }
+			if(GE[2].sprite){ SPR_releaseSprite(GE[2].sprite); GE[2].sprite = NULL; }
+			if(GE[3].sprite){ SPR_releaseSprite(GE[3].sprite); GE[3].sprite = NULL; }
+
+			CLEAR_VDP();
+
+			gRoom = gDescompressionExit;
+			gFrames = 0; 
+		}
+
+		//Atualizacao
+        SPR_update();
+        SYS_doVBlankProcess(); //Wait for screen refresh and do all SGDK VBlank tasks
+	}
+}
+
+void ROOM_TELA_HAMOOPIG()
+{
+	kprintf("Room Tela Hamoopig");
+
+	gFrames = 0;
+
+	u16 palette[64];
+
+	while(gRoom==R_TELA_HAMOOPIG)
+	{
+		gFrames++;
+
+		FUNCAO_UTIL();
+		FUNCAO_INPUT_SYSTEM(); //Verifica os joysticks 
+			
+		//inicializacao
+		if(gFrames==1)
+		{
+			//XGM_startPlay(music_stage8);
+			//XGM_isPlaying(); //FIX
+			
+			PAL_setColors(0, palette_black, 64, DMA); 
+			//BG_B
+			VDP_loadTileSet(room_0_bgb.tileset, 1, DMA); //Load the tileset
+			VDP_setTileMapEx(BG_B,room_0_bgb.tilemap, TILE_ATTR_FULL(PAL2, 0, FALSE, FALSE, 1), 0, 0, 0, 0, 40, 28, DMA);
+			//BG_A
+			VDP_loadTileSet(room_0_bga.tileset, 501, DMA); //Load the tileset
+			VDP_setTileMapEx(BG_A,room_0_bga.tilemap, TILE_ATTR_FULL(PAL3, 0, FALSE, FALSE, 501), 0, 0, 0, 0, 40, 28, DMA);
+			
+			//FADE IN
+			memcpy(&palette[32], room_0_bgb.palette->data, 18 * 2);
+			memcpy(&palette[48], room_0_bga.palette->data, 18 * 2);
+			PAL_fadeIn(0, (4 * 16) - 1, palette, 20, FALSE);
+		}
+
+		if(gFrames==60*2)
+		{
+			PAL_fadeOutAll(20, FALSE);
+			waitMs(200);
+		}
+
+		//gFrames=60*5; 
+		if( (gFrames>=60*2) || (P[P1].key_JOY_START_status==1 && gFrames>10) || (P[P2].key_JOY_START_status==1 && gFrames>10) ){
+			CLEAR_VDP();
+
+			gRoom = R_DESCOMPRESSION;
+			gDescompressionExit = R_IN_GAME;
+
+			//if(P[P1].key_JOY_START_status==1 || P[P1].key_JOY_START_status==2){gRoom=2; XGM_setPCM(P1_SFX, snd_confirm, sizeof(snd_confirm)); XGM_startPlayPCM(P1_SFX, 1, SOUND_PCM_CH3); }
+			gFrames = 0;
+		};
+
+		//Atualizacao
+        SPR_update(); //Updates (draws) the sprites
+        SYS_doVBlankProcess(); //Wait for screen refresh and do all SGDK VBlank tasks
+	}
+}
+
+void ROOM_IN_GAME()
+{
+	gFrames = 0;
+
+	while(gRoom==R_IN_GAME)
+	{
+		gFrames++;
+
+		FUNCAO_UTIL();
+		FUNCAO_INPUT_SYSTEM(); //Verifica os joysticks 
+
+
+		//buffer de especiais para P1
+		if(P[P1].hitPause==0 && P[P1].bufferSpecial!=0){
+			PLAYER_STATE(P1, P[P1].bufferSpecial);
+			P[P1].bufferSpecial=0;
+		}
+
+		//buffer de especiais para P2
+		if(P[P2].hitPause==0 && P[P2].bufferSpecial!=0){
+			PLAYER_STATE(P2, P[P2].bufferSpecial);
+			P[P2].bufferSpecial=0;
+		}
+		
+		//codigo de "SLOW MOTION KO"
+		if((P[P1].energiaBase==0 || P[P2].energiaBase==0) && gFrames>100)
+		{
+			gPauseSystem=1;
+			gPauseKoTimer++;
+			if(gPauseKoTimer>=90 && gPauseKoTimer<=320)
+			{
+				if(gPing2==0){gPauseSystem=0;}
+				if(gPing2==1){gPauseSystem=1;}
+			}
+			if(gPauseKoTimer>320)
+			{
+				gPauseSystem=0;
+			}
+		}else{
+			gPauseKoTimer=0;
+		}
+		
+		if(gFrames == 1){ 
+			gPodeMover=0;
+			FUNCAO_INICIALIZACAO(); //Inicializacao
+		}
+		if(gFrames<=355){ 
+			FUNCAO_ROUND_INIT(); //Rotina de Letreiramento de inicio dos rounds
+		}else{
+			if(gPauseSystem==0) {
+				FUNCAO_RELOGIO(); //HUD relogio
+				FUNCAO_BARRAS_DE_ENERGIA(); //HUD barras
+			}
+			if(P[P1].energiaBase==0 || P[P2].energiaBase==0){ 
+				gPodeMover=0; 
+			}
+		}
+		
+		
+		
+		if(doubleHitStep==1 && P[P1].hitPause==0 && P[P2].hitPause==0){ doubleHitStep=2; }
+		
+		if(gPauseSystem==0)
+		{
+			FUNCAO_ANIMACAO(); //Atualiza animacao
+			
+			FUNCAO_FSM(); //FSM = Finite State Machine (Maquina de Estados)
+			
+			FUNCAO_PHYSICS(); //Funcoes de Fisica
+			
+			FUNCAO_CAMERA(); //Atualiza a camera
+
+			FUNCAO_UPDATE_SPARKS(); //Atualiza os sparks
+			
+			if(gDebug == 1){ FUNCAO_DEBUG(); } //Debug
+		}
+
+		
+		SPR_update(); //Updates (draws) the sprites
+		SYS_doVBlankProcess(); //Wait for screen refresh and do all SGDK VBlank tasks
+	}
+}
+
+void ROOM_AFTER_MATCH()
+{
+	while(gRoom==R_AFTER_MATCH)
+	{
+		gFrames++;
+
+		FUNCAO_UTIL();
+		FUNCAO_INPUT_SYSTEM(); //Verifica os joysticks
+
+		//inicializacao
+		if(gFrames==1)
+		{
+			gInd_tileset = 1;
+		}
+
+		if(gFrames==300 || (gFrames>10 && (P[P1].key_JOY_START_status==1 || P[P2].key_JOY_START_status==1)))
+		{
+			PAL_fadeOut(0, 63, 20, FALSE);
+			CLEAR_VDP();
+
+			gFrames = 0;
+			gRoom = R_TELA_HAMOOPIG;
+		}
+
+		//Atualizacao
+        SPR_update(); //Updates (draws) the sprites
+        SYS_doVBlankProcess(); //Wait for screen refresh and do all SGDK VBlank tasks
+	}
+}
+
+void FUNCAO_UPDATE_SPARKS()
+{
+	for(u8 i = P1; i < NUM_PLAYERS; i++)
+	{
+		//Verifica se tem que remover o spark
+		if(Spark[i].countDown == 1 && Spark[i].sprite != NULL){
+			SPR_releaseSprite(Spark[i].sprite); Spark[i].sprite = NULL;
+		}
+		
+		//Corrige a posicao
+		if(Spark[i].sprite != NULL){
+			SPR_setPosition(Spark[i].sprite, Spark[i].x-camPosX, Spark[i].y);
+		}
+
+		//Atualiza o contador regressivo
+		if(Spark[i].countDown > 0){ Spark[i].countDown--; }
+	}
+}
+
+void FUNCAO_GET_SPARK_POSITION(s16 box1_x1, s16 box1_y1, s16 box1_x2, s16 box1_y2, s16 box2_x1, s16 box2_y1,  s16 box2_x2, s16 box2_y2, s16* sparkX, s16* sparkY)
+{
+    s16 hitX = 0;
+    s16 hitY = 0;
+
+    if(sparkX == NULL || sparkY == NULL)
+    {
+        return;
+    }
+
+    // Centro horizontal das caixas
+    const s16 box1CenterX = box1_x1 + ((box1_x2 - box1_x1) >> 1);
+    const s16 box2CenterX = box2_x1 + ((box2_x2 - box2_x1) >> 1);
+
+    // Define a face da box2 atingida pela box1
+    if(box2CenterX < box1CenterX)
+    {
+        // Alvo está à esquerda do ataque: usa a borda direita do alvo
+        hitX = box2_x2;
+    }
+    else
+    {
+        // Alvo está à direita do ataque: usa a borda esquerda do alvo
+        hitX = box2_x1;
+    }
+
+    // Garante que o ponto esteja dentro da caixa atacante
+    hitX = FUNCAO_CLAMP_S16(hitX, box1_x1, box1_x2);
+
+    // Centro vertical da caixa atacante
+    hitY = box1_y1 + ((box1_y2 - box1_y1) >> 1);
+
+    // Garante que o Y também esteja dentro da caixa atingida
+    hitY = FUNCAO_CLAMP_S16(hitY, box2_y1, box2_y2);
+
+    *sparkX = hitX;
+    *sparkY = hitY;
+}
+
+static inline s16 FUNCAO_CLAMP_S16(s16 value, s16 min, s16 max)
+{
+	if(value < min){ return min; }
+	if(value > max){ return max; }
+
+	return value;
 }
 
 //EOF - END OF FILE; by GAMEDEVBOSS 2015-2022
