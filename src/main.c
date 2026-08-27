@@ -1785,9 +1785,9 @@ void FUNCAO_SPR_POSITION()
 {
 	//ajusta posicao do sprite
 	if(P[P1].direcao== 1){ SPR_setPosition(P[P1].sprite, P[P1].x-(P[P1].w-P[P1].axisX)-camPosX, P[P1].y-P[P1].axisY); }
-	if(P[P1].direcao==-1){ SPR_setPosition(P[P1].sprite, P[P1].x- P[P1].axisX        -camPosX, P[P1].y-P[P1].axisY); }
+	if(P[P1].direcao==-1){ SPR_setPosition(P[P1].sprite, P[P1].x- P[P1].axisX         -camPosX, P[P1].y-P[P1].axisY); }
 	if(P[P2].direcao== 1){ SPR_setPosition(P[P2].sprite, P[P2].x-(P[P2].w-P[P2].axisX)-camPosX, P[P2].y-P[P2].axisY); }
-	if(P[P2].direcao==-1){ SPR_setPosition(P[P2].sprite, P[P2].x- P[P2].axisX        -camPosX, P[P2].y-P[P2].axisY); }
+	if(P[P2].direcao==-1){ SPR_setPosition(P[P2].sprite, P[P2].x- P[P2].axisX         -camPosX, P[P2].y-P[P2].axisY); }
 	
 	/*
 	if(gSombraStyle==2)
@@ -5386,7 +5386,7 @@ void ROOM_TELA_HAMOOPIG()
 
 			//if(P[P1].key_JOY_START_status==1 || P[P1].key_JOY_START_status==2){gRoom=2; XGM_setPCM(P1_SFX, snd_confirm, sizeof(snd_confirm)); XGM_startPlayPCM(P1_SFX, 1, SOUND_PCM_CH3); }
 			gFrames = 0;
-		};
+		}
 
 		//Atualizacao
         SPR_update(); //Updates (draws) the sprites
@@ -5513,7 +5513,8 @@ void FUNCAO_UPDATE_SPARKS()
 	{
 		//Verifica se tem que remover o spark
 		if(Spark[i].countDown == 1 && Spark[i].sprite != NULL){
-			SPR_releaseSprite(Spark[i].sprite); Spark[i].sprite = NULL;
+			SPR_releaseSprite(Spark[i].sprite);
+			Spark[i].sprite = NULL;
 		}
 		
 		//Corrige a posicao
