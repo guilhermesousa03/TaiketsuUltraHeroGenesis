@@ -543,7 +543,7 @@ void PLAYER_STATE(u8 Player, u16 State)
 	//--- RYO KOF94 ---// #ID:1
 	if(P[Player].id==1)
 	{
-		if(State==100 || State==610){ //OK
+		if(State==100){ //OK
 			P[Player].y = gAlturaPiso;
 			P[Player].w = 7*8;
 			P[Player].h = 10*8;
@@ -1154,6 +1154,16 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].dataAnim[2]  = 4;
 			P[Player].animFrameTotal = 2;
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_608, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+		}
+		if(State==610){ //OK
+			P[Player].w = 6*8;
+			P[Player].h = 14*8;
+			P[Player].axisX = (P[Player].w/2);
+			P[Player].axisY = P[Player].h;
+			P[Player].dataAnim[1]  = 20;
+			P[Player].dataAnim[2]  = 10;
+			P[Player].animFrameTotal = 2;
+			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_610, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==611){ //OK
 			P[Player].w = 8*8;
@@ -5127,8 +5137,8 @@ void FUNCAO_INICIALIZACAO()
 	//Intro State, Player Start
 	//P[P1].sprite = SPR_addSpriteExSafe(&spr_point, P[P1].x-P[P1].axisX, P[P1].y-P[P1].axisY, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 	//P[P2].sprite = SPR_addSpriteExSafe(&spr_point, P[P2].x-P[P2].axisX, P[P2].y-P[P2].axisY, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-	PLAYER_STATE(P1,100);
-	PLAYER_STATE(P2,100);
+	PLAYER_STATE(P1,610);
+	PLAYER_STATE(P2,610);
 	
 	SPR_setHFlip(P[P2].sprite, TRUE);
 	
