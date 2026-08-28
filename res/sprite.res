@@ -14,7 +14,7 @@ SPRITE spr_jack_pal1  "sprite/jack/palettes/pal1.png"  1  1 FAST 0
 SPRITE spr_jack_pal2  "sprite/jack/palettes/pal2.png"  1  1 FAST 0
 SPRITE spr_jack_000   "sprite/jack/000.png"            3  3 NONE 0
 SPRITE spr_jack_100   "sprite/jack/100.png"            7 10 FAST 0
-SPRITE spr_jack_101   "sprite/ryo/101.png"           11 13 FAST 0
+SPRITE spr_jack_101   "sprite/jack/101.png"           9 10 FAST 0
 SPRITE spr_jack_102   "sprite/ryo/102.png"           12 13 FAST 0
 SPRITE spr_jack_103   "sprite/ryo/103.png"            9 13 FAST 0
 SPRITE spr_jack_104   "sprite/ryo/104.png"           12 14 FAST 0
@@ -23,7 +23,7 @@ SPRITE spr_jack_106   "sprite/ryo/106.png"           16 14 FAST 0
 SPRITE spr_jack_107   "sprite/ryo/107.png"            7 13 FAST 0
 SPRITE spr_jack_108   "sprite/ryo/108.png"            7 13 NONE 0
 SPRITE spr_jack_113   "sprite/ryo/113.png"           12 13 FAST 0
-SPRITE spr_jack_151   "sprite/ryo/151.png"           10 13 FAST 0
+SPRITE spr_jack_151   "sprite/jack/151.png"           9 12 FAST 0
 SPRITE spr_jack_152   "sprite/ryo/152.png"           11 13 FAST 0
 SPRITE spr_jack_154   "sprite/ryo/154.png"           14 13 FAST 0
 SPRITE spr_jack_155   "sprite/ryo/155.png"           12 17 FAST 0
@@ -47,12 +47,12 @@ SPRITE spr_jack_320   "sprite/ryo/320.png"           10 15 FAST 0
 SPRITE spr_jack_324   "sprite/ryo/324.png"           12 11 FAST 0
 SPRITE spr_jack_325   "sprite/ryo/325.png"           12 15 FAST 0
 //326 = 306
-SPRITE spr_jack_410   "sprite/ryo/410.png"            7 13 NONE 0
+SPRITE spr_jack_410   "sprite/jack/410.png"            6 10 FAST 0
 SPRITE spr_jack_420   "sprite/jack/420.png"            6 10 FAST 0
 SPRITE spr_jack_471   "sprite/ryo/471.png"           10 13 FAST 0
 SPRITE spr_jack_472   "sprite/ryo/472.png"           12 12 FAST 0
-SPRITE spr_jack_501   "sprite/ryo/501.png"            9 13 NONE 0
-SPRITE spr_jack_502   "sprite/ryo/502.png"           11 12 NONE 0
+SPRITE spr_jack_501   "sprite/jack/501.png"            7 10 NONE 0
+SPRITE spr_jack_502   "sprite/jack/502.png"           7 10 FAST 0
 SPRITE spr_jack_503   "sprite/ryo/503.png"           10 10 NONE 0
 SPRITE spr_jack_550   "sprite/ryo/550.png"           14 15 NONE 0
 SPRITE spr_jack_551   "sprite/ryo/551.png"           15  8 FAST 0
@@ -61,6 +61,7 @@ SPRITE spr_jack_570   "sprite/ryo/570.png"           14  4 FAST 0
 SPRITE spr_jack_606   "sprite/ryo/606.png"            7 12 FAST 0
 SPRITE spr_jack_607   "sprite/ryo/607.png"            7 13 FAST 0
 SPRITE spr_jack_608   "sprite/ryo/608.png"            6  9 FAST 0
+SPRITE spr_jack_610   "sprite/jack/610.png"            6 14 FAST 0
 SPRITE spr_jack_611   "sprite/ryo/611.png"            8 14 FAST 0
 SPRITE spr_jack_612   "sprite/ryo/612.png"            8 17 FAST 0
 SPRITE spr_jack_615   "sprite/ryo/615.png"            9 12 FAST 0

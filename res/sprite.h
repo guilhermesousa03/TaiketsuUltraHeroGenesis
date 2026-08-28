@@ -55,6 +55,7 @@ extern const SpriteDefinition spr_jack_570;
 extern const SpriteDefinition spr_jack_606;
 extern const SpriteDefinition spr_jack_607;
 extern const SpriteDefinition spr_jack_608;
+extern const SpriteDefinition spr_jack_610;
 extern const SpriteDefinition spr_jack_611;
 extern const SpriteDefinition spr_jack_612;
 extern const SpriteDefinition spr_jack_615;
