@@ -543,30 +543,28 @@ void PLAYER_STATE(u8 Player, u16 State)
 	//--- RYO KOF94 ---// #ID:1
 	if(P[Player].id==1)
 	{
-		if(State==100){ //OK
+		if(State==100 || State==610){ //OK
 			P[Player].y = gAlturaPiso;
 			P[Player].w = 7*8;
 			P[Player].h = 10*8;
 			P[Player].axisX = (P[Player].w/2)+4;
 			P[Player].axisY = P[Player].h;
-			P[Player].dataAnim[1]  = 7;
-			P[Player].dataAnim[2]  = 7;
-			P[Player].dataAnim[3]  = 7;
-			P[Player].dataAnim[4]  = 7;
+			P[Player].dataAnim[1]  = 5;
+			P[Player].dataAnim[2]  = 5;
+			P[Player].dataAnim[3]  = 5;
+			P[Player].dataAnim[4]  = 5;
 			P[Player].animFrameTotal = 4;
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_100, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==101){ //OK
-			P[Player].w = 9*8;
-			P[Player].h = 10*8;
+			P[Player].w = 11*8;
+			P[Player].h = 13*8;
 			P[Player].axisX = (P[Player].w/2)+15;
 			P[Player].axisY = P[Player].h-1;
 			P[Player].dataAnim[1]  = 2;
 			P[Player].dataAnim[2]  = 3;
 			P[Player].dataAnim[3]  = 4;
-			P[Player].dataAnim[4]  = 3;
-			P[Player].dataAnim[5]  = 2;
-			P[Player].animFrameTotal = 5;
+			P[Player].animFrameTotal = 3;
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_101, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==102){ //OK
@@ -687,16 +685,15 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_113, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==151){ //OK
-			P[Player].w = 9*8;
-			P[Player].h = 12*8;
+			P[Player].w = 10*8;
+			P[Player].h = 13*8;
 			P[Player].axisX = (P[Player].w/2)+5;
 			P[Player].axisY = P[Player].h-1;
 			P[Player].dataAnim[1]  = 2;
 			P[Player].dataAnim[2]  = 3;
 			P[Player].dataAnim[3]  = 3;
 			P[Player].dataAnim[4]  = 4;
-			P[Player].dataAnim[5]  = 3;
-			P[Player].animFrameTotal = 5;
+			P[Player].animFrameTotal = 4;
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_151, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==152){ //OK
@@ -949,8 +946,8 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_325, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==410){ //OK
-			P[Player].w = 6*8;
-			P[Player].h = 10*8;
+			P[Player].w = 7*8;
+			P[Player].h = 13*8;
 			P[Player].axisX = (P[Player].w/2)+4;
 			P[Player].axisY = P[Player].h;
 			P[Player].dataAnim[1]  = 7;
@@ -958,9 +955,8 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].dataAnim[3]  = 7;
 			P[Player].dataAnim[4]  = 7;
 			P[Player].dataAnim[5]  = 7;
-			P[Player].dataAnim[4]  = 7;
-			P[Player].dataAnim[3]  = 7;
-			P[Player].animFrameTotal = 7;
+			P[Player].dataAnim[6]  = 7;
+			P[Player].animFrameTotal = 6;
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_410, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==420){ //OK
@@ -999,26 +995,24 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_472, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==501){
-			P[Player].w = 7*8;
-			P[Player].h = 10*8;
+			P[Player].w = 9*8;
+			P[Player].h = 13*8;
 			P[Player].axisX = P[Player].w/2;
 			P[Player].axisY = P[Player].h;
-			P[Player].dataAnim[1]  = 5;
-			P[Player].dataAnim[2]  = 7;
-			P[Player].animFrameTotal = 2;
+			P[Player].dataAnim[1]  = 12;
+			P[Player].animFrameTotal = 1;
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_501, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==502){
-			P[Player].w = 7*8;
-			P[Player].h = 10*8;
+			P[Player].w = 9*8;
+			P[Player].h = 13*8;
 			P[Player].axisX = P[Player].w/2;
 			P[Player].axisY = P[Player].h;
 			P[Player].dataAnim[1]  = 6;
 			P[Player].dataAnim[2]  = 6;
 			P[Player].dataAnim[3]  = 6;
-			P[Player].dataAnim[4]  = 6;
-			P[Player].animFrameTotal = 4;
-			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_502, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+			P[Player].animFrameTotal = 3;
+			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_501, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==503){
 			P[Player].w = 11*8;
@@ -1027,7 +1021,7 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].axisY = P[Player].h;
 			P[Player].dataAnim[1]  = 12;
 			P[Player].animFrameTotal = 1;
-			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_503, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
+			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_502, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==504){
 			P[Player].w = 11*8;
@@ -1160,16 +1154,6 @@ void PLAYER_STATE(u8 Player, u16 State)
 			P[Player].dataAnim[2]  = 4;
 			P[Player].animFrameTotal = 2;
 			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_608, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-		}
-		if(State==610){ //OK
-			P[Player].w = 6*8;
-			P[Player].h = 14*8;
-			P[Player].axisX = (P[Player].w/2)+4;
-			P[Player].axisY = P[Player].h;
-			P[Player].dataAnim[1]  = 20;
-			P[Player].dataAnim[2]  = 10;
-			P[Player].animFrameTotal = 2;
-			P[Player].sprite = SPR_addSpriteExSafe(&spr_jack_610, P[Player].x-P[Player].axisX, P[Player].y-P[Player].axisY, TILE_ATTR(P[Player].paleta, FALSE, FALSE, FALSE), SPR_FLAG_DISABLE_DELAYED_FRAME_UPDATE | SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 		}
 		if(State==611){ //OK
 			P[Player].w = 8*8;
@@ -1801,9 +1785,9 @@ void FUNCAO_SPR_POSITION()
 {
 	//ajusta posicao do sprite
 	if(P[P1].direcao== 1){ SPR_setPosition(P[P1].sprite, P[P1].x-(P[P1].w-P[P1].axisX)-camPosX, P[P1].y-P[P1].axisY); }
-	if(P[P1].direcao==-1){ SPR_setPosition(P[P1].sprite, P[P1].x- P[P1].axisX        -camPosX, P[P1].y-P[P1].axisY); }
+	if(P[P1].direcao==-1){ SPR_setPosition(P[P1].sprite, P[P1].x- P[P1].axisX         -camPosX, P[P1].y-P[P1].axisY); }
 	if(P[P2].direcao== 1){ SPR_setPosition(P[P2].sprite, P[P2].x-(P[P2].w-P[P2].axisX)-camPosX, P[P2].y-P[P2].axisY); }
-	if(P[P2].direcao==-1){ SPR_setPosition(P[P2].sprite, P[P2].x- P[P2].axisX        -camPosX, P[P2].y-P[P2].axisY); }
+	if(P[P2].direcao==-1){ SPR_setPosition(P[P2].sprite, P[P2].x- P[P2].axisX         -camPosX, P[P2].y-P[P2].axisY); }
 	
 	/*
 	if(gSombraStyle==2)
@@ -5143,8 +5127,8 @@ void FUNCAO_INICIALIZACAO()
 	//Intro State, Player Start
 	//P[P1].sprite = SPR_addSpriteExSafe(&spr_point, P[P1].x-P[P1].axisX, P[P1].y-P[P1].axisY, TILE_ATTR(PAL2, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
 	//P[P2].sprite = SPR_addSpriteExSafe(&spr_point, P[P2].x-P[P2].axisX, P[P2].y-P[P2].axisY, TILE_ATTR(PAL3, FALSE, FALSE, FALSE), SPR_FLAG_AUTO_VISIBILITY | SPR_FLAG_AUTO_VRAM_ALLOC | SPR_FLAG_AUTO_TILE_UPLOAD);
-	PLAYER_STATE(P1,610);
-	PLAYER_STATE(P2,610);
+	PLAYER_STATE(P1,100);
+	PLAYER_STATE(P2,100);
 	
 	SPR_setHFlip(P[P2].sprite, TRUE);
 	
@@ -5402,7 +5386,7 @@ void ROOM_TELA_HAMOOPIG()
 
 			//if(P[P1].key_JOY_START_status==1 || P[P1].key_JOY_START_status==2){gRoom=2; XGM_setPCM(P1_SFX, snd_confirm, sizeof(snd_confirm)); XGM_startPlayPCM(P1_SFX, 1, SOUND_PCM_CH3); }
 			gFrames = 0;
-		};
+		}
 
 		//Atualizacao
         SPR_update(); //Updates (draws) the sprites
@@ -5529,7 +5513,8 @@ void FUNCAO_UPDATE_SPARKS()
 	{
 		//Verifica se tem que remover o spark
 		if(Spark[i].countDown == 1 && Spark[i].sprite != NULL){
-			SPR_releaseSprite(Spark[i].sprite); Spark[i].sprite = NULL;
+			SPR_releaseSprite(Spark[i].sprite);
+			Spark[i].sprite = NULL;
 		}
 		
 		//Corrige a posicao
