@@ -20,8 +20,9 @@ SPRITE spr_jack_103   "sprite/ryo/103.png"            9 13 FAST 0
 SPRITE spr_jack_104   "sprite/ryo/104.png"           12 14 FAST 0
 SPRITE spr_jack_105   "sprite/ryo/105.png"           14 13 FAST 0
 SPRITE spr_jack_106   "sprite/ryo/106.png"           16 14 FAST 0
-SPRITE spr_jack_107   "sprite/ryo/107.png"            7 13 FAST 0
-SPRITE spr_jack_108   "sprite/ryo/108.png"            7 13 NONE 0
+SPRITE spr_jack_107   "sprite/jack/107.png"            7 10 FAST 0
+SPRITE spr_jack_108   "sprite/jack/108.png"            7 10 NONE 0
+SPRITE spr_jack_110   "sprite/jack/110.png"            7 10 NONE 0
 SPRITE spr_jack_113   "sprite/ryo/113.png"           12 13 FAST 0
 SPRITE spr_jack_151   "sprite/jack/151.png"           9 12 FAST 0
 SPRITE spr_jack_152   "sprite/ryo/152.png"           11 13 FAST 0

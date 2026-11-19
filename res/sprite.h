@@ -20,6 +20,7 @@ extern const SpriteDefinition spr_jack_105;
 extern const SpriteDefinition spr_jack_106;
 extern const SpriteDefinition spr_jack_107;
 extern const SpriteDefinition spr_jack_108;
+extern const SpriteDefinition spr_jack_110;
 extern const SpriteDefinition spr_jack_113;
 extern const SpriteDefinition spr_jack_151;
 extern const SpriteDefinition spr_jack_152;
