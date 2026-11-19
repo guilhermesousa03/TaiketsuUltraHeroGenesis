@@ -51,7 +51,7 @@ SPRITE spr_jack_410   "sprite/jack/410.png"            6 10 FAST 0
 SPRITE spr_jack_420   "sprite/jack/420.png"            6 10 FAST 0
 SPRITE spr_jack_471   "sprite/ryo/471.png"           10 13 FAST 0
 SPRITE spr_jack_472   "sprite/ryo/472.png"           12 12 FAST 0
-SPRITE spr_jack_501   "sprite/jack/501.png"            7 10 NONE 0
+SPRITE spr_jack_501   "sprite/jack/501.png"            6 10 NONE 0
 SPRITE spr_jack_502   "sprite/jack/502.png"           7 10 FAST 0
 SPRITE spr_jack_503   "sprite/ryo/503.png"           10 10 NONE 0
 SPRITE spr_jack_550   "sprite/ryo/550.png"           14 15 NONE 0
